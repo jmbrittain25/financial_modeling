@@ -2,6 +2,7 @@ from typing import List, Dict
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import os
 
 from .sim import Simulation
 
@@ -140,3 +141,18 @@ class SimulationAnalyzer:
         plt.legend()
         plt.grid(True)
         plt.show()
+
+    @classmethod
+    def from_directory(cls, dir_path: str, file_extension: str = '.json') -> 'SimulationAnalyzer':
+        sims = []
+        for filename in os.listdir(dir_path):
+            if filename.endswith(file_extension):
+                filepath = os.path.join(dir_path, filename)
+                if file_extension == '.json':
+                    sim = Simulation.load_json(filepath)
+                elif file_extension == '.pkl':
+                    sim = Simulation.load_pickle(filepath)
+                else:
+                    raise ValueError(f"Unsupported file extension: {file_extension}")
+                sims.append(sim)
+        return cls(sims)

@@ -1,5 +1,6 @@
-from typing import Dict, Any
+import os
 import datetime as dt
+from typing import Dict, Any
 
 import financial_simulator as fs
 
@@ -76,17 +77,18 @@ def real_estate_factory(params: Dict[str, Any]) -> fs.Simulation:
 
 if __name__ == "__main__":
 
-    # Distributions based on research (realistic for 2025 Mechanicsburg PA scenario)
+    output_dir = os.path.join("output", "20251230_test")
+
     dists = {
-        'heloc_draw': fs.UniformDistribution(100000, 150000),  # Amount withdrawn
-        'heloc_initial_rate': fs.NormalDistribution(0.075, 0.005),  # ~7.5% avg, variable
-        'down_fraction': fs.UniformDistribution(0.4, 0.6),  # 40-60% down
-        'appraisal': fs.NormalDistribution(300000, 20000),  # ~$300k avg
-        'closing_fees': fs.TriangularDistribution(5000, 10000, 16000),  # 2-5% of $300k (positive, negated in factory)
-        'seller_rate': fs.UniformDistribution(0.04, 0.06),  # Family deal 4-6%
-        'seller_term_months': fs.UniformDistribution(60, 120),  # 5-10 years
+        'heloc_draw': fs.UniformDistribution(100000, 150000),               # Amount withdrawn
+        'heloc_initial_rate': fs.NormalDistribution(0.075, 0.005),          # ~7.5% avg, variable
+        'down_fraction': fs.UniformDistribution(0.4, 0.6),                  # 40-60% down
+        'appraisal': fs.NormalDistribution(300000, 20000),                  # ~$300k avg
+        'closing_fees': fs.TriangularDistribution(5000, 10000, 16000),      # 2-5% of $300k (positive, negated in factory)
+        'seller_rate': fs.UniformDistribution(0.04, 0.06),                  # Family deal 4-6%
+        'seller_term_months': fs.UniformDistribution(60, 120),              # 5-10 years
         'kitchen_cost': fs.TriangularDistribution(-75000, -40000, -25000),  # Renov costs (negative for expense)
-        'floors_cost': fs.TriangularDistribution(-15000, -10000, -5000),
+        'floors_cost': fs.TriangularDistribution(-15000, -10000, -5000),    # 
         'central_air_cost': fs.TriangularDistribution(-10000, -7000, -5000),
         'monthly_rent': fs.NormalDistribution(2000, 200),  # ~$2000 avg
         'monthly_lawn': fs.NormalDistribution(-50, 10),  # Per month in season
@@ -99,18 +101,13 @@ if __name__ == "__main__":
         'appreciation_rate': fs.NormalDistribution(0.04, 0.005)  # 4% annual ±0.5%
     }
 
-    # Build and run 100 Monte Carlo simulations
+    # Build and run 1000 Monte Carlo simulations
     builder = fs.SimulationBuilder(real_estate_factory, dists)
-    sims = builder.build_simulations(1_000, seed=42)  # Use seed for repeatability
+    sims = builder.build_simulations(1_000, seed=42)
 
-    # Analyze: Stats, plots for cash, property value, distributions
-    analyzer = fs.SimulationAnalyzer(sims)
-    print(analyzer.compute_statistics())
-    analyzer.plot_cumulative_cash_flows()
-    analyzer.plot_property_values()
-    analyzer.plot_histogram_end_values()
+    # Save simulations to output directory
+    os.makedirs(output_dir, exist_ok=True)
+    for i, sim in enumerate(sims):
+        sim.save_json(os.path.join(output_dir, f"sim_{i:04d}.json"))  # Zero-padded for sorting
 
-    # Serialize one for example
-    sims[0].save_json("example_sim.json")
-
-    print("Simulations complete")
+    print(f"Saved {len(sims)} simulations to '{output_dir}' directory.")
