@@ -1,4 +1,4 @@
-import datetime
+import datetime as dt
 import json
 import pickle
 from dataclasses import dataclass, field
@@ -11,11 +11,12 @@ from ..event.event_builder import EventBuilder, FixedValueGenerator, GrowingValu
 @dataclass
 class Simulation:
     name: str
-    start: datetime.datetime
-    end: datetime.datetime
+    start: dt.datetime
+    end: dt.datetime
+    appreciation_rate: float = 0.04
     event_builders: List[EventBuilder] = field(default_factory=list)
     events: List[Event] = field(default_factory=list)
-    state_history: Dict[datetime.datetime, Dict[str, float]] = field(default_factory=dict)
+    state_history: Dict[dt.datetime, Dict[str, float]] = field(default_factory=dict)
 
     def add_builder(self, builder: EventBuilder):
         self.event_builders.append(builder)
@@ -30,11 +31,11 @@ class Simulation:
         cumulative_cash = 0.0
         property_value = 0.0  # Set via metadata or param
         last_time = self.start
-        appreciation_rate = 0.04 / 12  # Monthly approx for 4% annual
+        monthly_appreciation = self.appreciation_rate / 12
         for event in self.events:
             if event.time != last_time:
                 delta_months = (event.time - last_time).days / 30
-                property_value *= (1 + appreciation_rate) ** delta_months
+                property_value *= (1 + monthly_appreciation) ** delta_months
                 self.state_history[last_time] = {'cumulative_cash': cumulative_cash, 'property_value': property_value}
             cumulative_cash += event.value
             # If purchase event, set initial property_value
@@ -48,6 +49,7 @@ class Simulation:
             'name': self.name,
             'start': self.start.isoformat(),
             'end': self.end.isoformat(),
+            'appreciation_rate': self.appreciation_rate,
             'event_builders': [b.to_dict() for b in self.event_builders],
             'events': [e.to_dict() for e in self.events],
             'state_history': {t.isoformat(): v for t, v in self.state_history.items()}
@@ -57,8 +59,9 @@ class Simulation:
     def from_dict(cls, d: Dict) -> 'Simulation':
         sim = cls(
             d['name'],
-            datetime.datetime.fromisoformat(d['start']),
-            datetime.datetime.fromisoformat(d['end'])
+            dt.datetime.fromisoformat(d['start']),
+            dt.datetime.fromisoformat(d['end']),
+            d['appreciation_rate']
         )
         builder_types = {
             'FixedValueGenerator': FixedValueGenerator.from_dict,
@@ -72,7 +75,7 @@ class Simulation:
             if builder_cls:
                 sim.add_builder(builder_cls(b_dict))
         sim.events = [Event.from_dict(e) for e in d['events']]
-        sim.state_history = {datetime.datetime.fromisoformat(t): v for t, v in d['state_history'].items()}
+        sim.state_history = {dt.datetime.fromisoformat(t): v for t, v in d['state_history'].items()}
         return sim
 
     def save_json(self, filepath: str):

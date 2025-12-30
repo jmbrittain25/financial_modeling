@@ -22,25 +22,87 @@ class SimulationAnalyzer:
         return pd.DataFrame({'cash_flow': daily_cash, 'cumulative': cumulative, 'property_value': prop_df})
 
     def plot_cumulative_cash_flows(self, title: str = "Cumulative Cash Flows"):
+        def get_color(fraction):
+            if fraction <= 0.5:
+                val = fraction / 0.5
+                r = 1
+                g = val
+                b = val
+            else:
+                val = (fraction - 0.5) / 0.5
+                r = 1 - val
+                g = 1 - val
+                b = 1
+            return (r, g, b)
+
+        dfs = [self.to_dataframe(sim) for sim in self.sims]
+        endings_net = [df['cumulative'].iloc[-1] + df['property_value'].iloc[-1] for df in dfs]
+        sorted_indices = np.argsort(endings_net)
+        positions = np.linspace(0, len(self.sims) - 1, 11, dtype=int)
+        selected_indices = sorted_indices[positions]
+
+        min_x = min(df.index.min() for df in dfs)
+        max_x = max(df.index.max() for df in dfs)
+
         plt.figure(figsize=(12, 6))
-        for sim in self.sims:
-            df = self.to_dataframe(sim)
-            plt.plot(df.index, df['cumulative'], label=sim.name, alpha=0.7)
+        for df in dfs:
+            plt.plot(df.index, df['cumulative'], color='black', alpha=0.1)
+
+        for i in reversed(range(11)):
+            idx = selected_indices[i]
+            percentile = i * 10
+            label = f"{percentile}th percentile ({self.sims[idx].name})"
+            color = get_color(i / 10.0)
+            plt.plot(dfs[idx].index, dfs[idx]['cumulative'], color=color, label=label)
+
         plt.title(title)
         plt.xlabel("Time")
         plt.ylabel("Cumulative Cash")
+        plt.xlim(min_x, max_x)
+        plt.margins(x=0)
         plt.legend()
         plt.grid(True)
         plt.show()
 
     def plot_property_values(self, title: str = "Property Values Over Time"):
+        def get_color(fraction):
+            if fraction <= 0.5:
+                val = fraction / 0.5
+                r = 1
+                g = val
+                b = val
+            else:
+                val = (fraction - 0.5) / 0.5
+                r = 1 - val
+                g = 1 - val
+                b = 1
+            return (r, g, b)
+
+        dfs = [self.to_dataframe(sim) for sim in self.sims]
+        endings_net = [df['cumulative'].iloc[-1] + df['property_value'].iloc[-1] for df in dfs]
+        sorted_indices = np.argsort(endings_net)
+        positions = np.linspace(0, len(self.sims) - 1, 11, dtype=int)
+        selected_indices = sorted_indices[positions]
+
+        min_x = min(df.index.min() for df in dfs)
+        max_x = max(df.index.max() for df in dfs)
+
         plt.figure(figsize=(12, 6))
-        for sim in self.sims:
-            df = self.to_dataframe(sim)
-            plt.plot(df.index, df['property_value'], label=sim.name, alpha=0.7)
+        for df in dfs:
+            plt.plot(df.index, df['property_value'], color='black', alpha=0.1)
+
+        for i in reversed(range(11)):
+            idx = selected_indices[i]
+            percentile = i * 10
+            label = f"{percentile}th percentile ({self.sims[idx].name})"
+            color = get_color(i / 10.0)
+            plt.plot(dfs[idx].index, dfs[idx]['property_value'], color=color, label=label)
+
         plt.title(title)
         plt.xlabel("Time")
         plt.ylabel("Property Value")
+        plt.xlim(min_x, max_x)
+        plt.margins(x=0)
         plt.legend()
         plt.grid(True)
         plt.show()
