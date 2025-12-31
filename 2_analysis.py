@@ -4,7 +4,7 @@ import financial_simulator as fs
 
 if __name__ == "__main__":
 
-    output_dir = os.path.join("output", "20251230_test")
+    output_dir = os.path.join("output", "20251231_test")
 
     print(f"Loading simulations from '{output_dir}'.")
 
@@ -13,5 +13,6 @@ if __name__ == "__main__":
     analyzer.plot_cumulative_cash_flows(title="Cumulative Cash Flows")
     analyzer.plot_property_values(title="Property Values Over Time")
     analyzer.plot_histogram_end_values(title="Distribution of Ending Net Worth")
-
+    analyzer.plot_net_worth()
+    analyzer.analyze_params()
     print("Analysis complete.")

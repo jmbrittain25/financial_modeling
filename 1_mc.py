@@ -22,6 +22,7 @@ def real_estate_factory(params: Dict[str, Any]) -> fs.Simulation:
     
     # HELOC: Variable rate, amount withdrawn as down payment
     heloc_draw = params.get('heloc_draw', down_payment)  # Could be less if cash used
+    sim.add_builder(fs.TriggeredEventBuilder(start, heloc_draw, metadata={'type': 'heloc_draw'}))  # Add initial inflow
     heloc_rate_dist = fs.NormalDistribution(params.get('heloc_initial_rate', 0.075), 0.005)  # Varies quarterly
     heloc_builder = fs.VariableRateLoanBuilder(
         heloc_draw, params.get('heloc_initial_rate', 0.075), 120, start,
@@ -73,11 +74,14 @@ def real_estate_factory(params: Dict[str, Any]) -> fs.Simulation:
     # Property appreciation tracked in run()
     # Other: Inflation on all costs implicitly via growing generators
     
+    sim.params = params  # Store parameters for analysis
+    sim.initial_property_value = appraisal  # Set initial value
+    
     return sim
 
 if __name__ == "__main__":
 
-    output_dir = os.path.join("output", "20251230_test")
+    output_dir = os.path.join("output", "20251231_test")
 
     dists = {
         'heloc_draw': fs.UniformDistribution(100000, 150000),               # Amount withdrawn

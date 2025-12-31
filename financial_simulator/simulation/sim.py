@@ -14,6 +14,8 @@ class Simulation:
     start: dt.datetime
     end: dt.datetime
     appreciation_rate: float = 0.04
+    initial_property_value: float = 0.0  # Added for correct initial value
+    params: Dict[str, any] = field(default_factory=dict)  # Added to store input params
     event_builders: List[EventBuilder] = field(default_factory=list)
     events: List[Event] = field(default_factory=list)
     state_history: Dict[dt.datetime, Dict[str, float]] = field(default_factory=dict)
@@ -40,16 +42,25 @@ class Simulation:
             cumulative_cash += event.value
             # If purchase event, set initial property_value
             if 'type' in event.metadata and event.metadata['type'] == 'purchase':
-                property_value = -event.value  # Absolute value
+                property_value = self.initial_property_value  # Use stored initial value
             last_time = event.time
         self.state_history[last_time] = {'cumulative_cash': cumulative_cash, 'property_value': property_value}
 
     def to_dict(self) -> Dict:
+        # Serialize params, converting datetimes to ISO strings
+        params_serialized = {}
+        for k, v in self.params.items():
+            if isinstance(v, dt.datetime):
+                params_serialized[k] = v.isoformat()
+            else:
+                params_serialized[k] = v
         return {
             'name': self.name,
             'start': self.start.isoformat(),
             'end': self.end.isoformat(),
             'appreciation_rate': self.appreciation_rate,
+            'initial_property_value': self.initial_property_value,  # Added
+            'params': params_serialized,  # Serialized version
             'event_builders': [b.to_dict() for b in self.event_builders],
             'events': [e.to_dict() for e in self.events],
             'state_history': {t.isoformat(): v for t, v in self.state_history.items()}
@@ -57,11 +68,17 @@ class Simulation:
 
     @classmethod
     def from_dict(cls, d: Dict) -> 'Simulation':
+        # Deserialize params, converting ISO strings back to datetimes where appropriate
+        params = d.get('params', {})
+        if 'mom_leave_time' in params and isinstance(params['mom_leave_time'], str):
+            params['mom_leave_time'] = dt.datetime.fromisoformat(params['mom_leave_time'])
         sim = cls(
             d['name'],
             dt.datetime.fromisoformat(d['start']),
             dt.datetime.fromisoformat(d['end']),
-            d['appreciation_rate']
+            d['appreciation_rate'],
+            d.get('initial_property_value', 0.0),  # Added
+            params  # Deserialized
         )
         builder_types = {
             'FixedValueGenerator': FixedValueGenerator.from_dict,
