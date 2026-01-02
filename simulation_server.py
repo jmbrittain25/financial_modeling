@@ -1,9 +1,16 @@
-import os
-import datetime as dt
 from typing import Dict, Any
+from flask import Flask, request, jsonify
+import threading
+import uuid
+import datetime as dt
 
 import financial_simulator as fs
 
+
+app = Flask(__name__)
+
+# In-memory storage for jobs (for MVP)
+jobs = {}  # {job_id: {'status': 'running/completed/failed', 'progress': 0, 'message': '', 'results': {}}}
 
 def real_estate_factory(params: Dict[str, Any]) -> fs.Simulation:
     start = dt.datetime(2026, 1, 1)
@@ -79,39 +86,58 @@ def real_estate_factory(params: Dict[str, Any]) -> fs.Simulation:
     
     return sim
 
-if __name__ == "__main__":
+def run_simulations(config):
+    job_id = config['job_id']
+    try:
+        # Recreate dists from JSON
+        param_distributions = {k: fs.create_distribution(v) for k, v in config['dists'].items()}
+        
+        # Build and run
+        builder = fs.SimulationBuilder(real_estate_factory, param_distributions)
+        sims = builder.build_simulations(config['num_simulations'], seed=config['seed'])
+        
+        # Analyze
+        analyzer = fs.SimulationAnalyzer(sims)
+        stats = analyzer.compute_statistics()
+        
+        # Prepare results: Serialize sims, events, metrics
+        results = {
+            'sims': [sim.to_dict() for sim in sims],  # Includes events, state_history
+            'stats': stats,  # Global metrics
+            # Add time-series metrics if needed, e.g., from analyzer.to_dataframe(sims[0])
+        }
+        
+        jobs[job_id]['status'] = 'completed'
+        jobs[job_id]['progress'] = 100
+        jobs[job_id]['message'] = 'Done'
+        jobs[job_id]['results'] = results
+    except Exception as e:
+        jobs[job_id]['status'] = 'failed'
+        jobs[job_id]['message'] = str(e)
 
-    output_dir = os.path.join("output", "20251231_test")
+@app.route('/simulate', methods=['POST'])
+def simulate():
+    config = request.json
+    job_id = config.get('job_id', str(uuid.uuid4()))
+    jobs[job_id] = {'status': 'running', 'progress': 0, 'message': 'Starting', 'results': None}
+    
+    # Start background thread
+    thread = threading.Thread(target=run_simulations, args=(config,))
+    thread.start()
+    
+    return jsonify({'job_id': job_id}), 202
 
-    dists = {
-        'heloc_draw': fs.UniformDistribution(100000, 150000),               # Amount withdrawn
-        'heloc_initial_rate': fs.NormalDistribution(0.075, 0.005),          # ~7.5% avg, variable
-        'down_fraction': fs.UniformDistribution(0.4, 0.6),                  # 40-60% down
-        'appraisal': fs.NormalDistribution(300000, 20000),                  # ~$300k avg
-        'closing_fees': fs.TriangularDistribution(5000, 10000, 16000),      # 2-5% of $300k (positive, negated in factory)
-        'seller_rate': fs.UniformDistribution(0.04, 0.06),                  # Family deal 4-6%
-        'seller_term_months': fs.UniformDistribution(60, 120),              # 5-10 years
-        'kitchen_cost': fs.TriangularDistribution(-75000, -40000, -25000),  # Renov costs (negative for expense)
-        'floors_cost': fs.TriangularDistribution(-15000, -10000, -5000),    # 
-        'central_air_cost': fs.TriangularDistribution(-10000, -7000, -5000),
-        'monthly_rent': fs.NormalDistribution(2000, 200),  # ~$2000 avg
-        'monthly_lawn': fs.NormalDistribution(-50, 10),  # Per month in season
-        'monthly_maint': fs.NormalDistribution(-200, 50),  # General
-        'rent_growth': fs.NormalDistribution(0.03, 0.01),  # 3% annual
-        'mom_leave_time': fs.DateDistribution(  # At least 2 years, up to 5
-            dt.datetime(2026, 1, 1) + dt.timedelta(days=730),
-            dt.datetime(2026, 1, 1) + dt.timedelta(days=1825)
-        ),
-        'appreciation_rate': fs.NormalDistribution(0.04, 0.005)  # 4% annual ±0.5%
-    }
+@app.route('/status/<job_id>', methods=['GET'])
+def get_status(job_id):
+    job = jobs.get(job_id, {'status': 'not_found', 'progress': 0, 'message': 'Job not found'})
+    return jsonify(job)
 
-    # Build and run 1000 Monte Carlo simulations
-    builder = fs.SimulationBuilder(real_estate_factory, dists)
-    sims = builder.build_simulations(1_000, seed=42)
+@app.route('/results/<job_id>', methods=['GET'])
+def get_results(job_id):
+    job = jobs.get(job_id)
+    if job and job['status'] == 'completed':
+        return jsonify(job['results'])
+    return jsonify({'error': 'Results not ready or not found'}), 404
 
-    # Save simulations to output directory
-    os.makedirs(output_dir, exist_ok=True)
-    for i, sim in enumerate(sims):
-        sim.save_json(os.path.join(output_dir, f"sim_{i:04d}.json"))  # Zero-padded for sorting
-
-    print(f"Saved {len(sims)} simulations to '{output_dir}' directory.")
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5001)
