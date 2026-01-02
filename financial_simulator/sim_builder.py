@@ -4,7 +4,7 @@ from concurrent.futures import ProcessPoolExecutor
 from functools import partial
 
 from .sim import Simulation
-from ..utils import Distribution
+from .utils import Distribution
 
 
 def _build_one(factory: Callable[[Dict[str, Any]], Simulation], param_distributions: Dict[str, Distribution], base_seed: Optional[int], i: int) -> Simulation:
