@@ -8,6 +8,10 @@ from scipy.optimize import newton
 from .sim import Simulation
 
 
+def get_color(frac: float):
+    return plt.cm.viridis(frac)
+
+
 class SimulationAnalyzer:
     def __init__(self, sims: List[Simulation]):
         self.sims = sims
@@ -61,158 +65,44 @@ class SimulationAnalyzer:
         result['noi'] = result['revenue'] + result['operating_expenses']  # Expenses negative
         result['net_cash_flow'] = result['noi'] + result['debt_service'] + result['capex'] + result.get('other', 0.0)  # Approx equals cash_flow
         result['net_worth'] = result['cumulative_cash'] + result['property_value'] - result['total_loans']
-        result['dscr'] = -result['noi'] / -result['debt_service'] if result['debt_service'].any() < 0 else np.nan  # Debt Service Coverage Ratio (>1.2 ideal)
-        
+        result['dscr'] = -result['noi'] / -result['debt_service'] if result['debt_service'].any() < 0 else np.nan  # Debt Service Coverage Ratio
         return result
 
-    def compute_irr(self, sim: Simulation, selling_cost_rate: float = 0.06) -> float:
+    def compute_statistics(self) -> Dict:
+        dfs = [self.to_dataframe(sim) for sim in self.sims]
+        metrics = {
+            'ending_net_worth': [df['net_worth'][-1] for df in dfs],
+            'irr': [self.compute_irr(sim) for sim in self.sims],
+            'roi': [self.compute_roi(sim) for sim in self.sims],
+            'cap_rate': [self.compute_cap_rate(sim) for sim in self.sims],
+        }
+        stats = {k: {'mean': np.mean(v), 'std': np.std(v), 'percentiles': np.percentile(v, [10,50,90])} for k, v in metrics.items()}
+        return stats
+
+    def compute_irr(self, sim: Simulation) -> float:
         df = self.to_dataframe(sim)
-        # Group cash flows annually
-        df_resampled = df.resample('Y').sum()
-        years = df_resampled.index.year
-        cash_flows = df_resampled['net_cash_flow'].values
-        # Initial is first year's (often negative)
-        irr_series = list(cash_flows[:-1])  # Intermediate years
-        # Terminal: last CF + net proceeds (prop - loans - selling costs)
-        terminal = cash_flows[-1] + df['property_value'][-1] * (1 - selling_cost_rate) - df['total_loans'][-1]
-        irr_series.append(terminal)
-        # Use XIRR approximation
-        dates = df_resampled.index
-        ordinal_dates = [(d - dates[0]).days / 365.0 for d in dates]
+        cfs = df['cash_flow'].values
+        years = [(t - df.index[0]).days / 365.25 for t in df.index]
         def npv(r):
-            return sum(cf / (1 + r)**t for cf, t in zip(irr_series, ordinal_dates))
+            return sum(cf / (1 + r)**y for y, cf in zip(years, cfs))
         try:
             return newton(npv, 0.1)
         except:
-            return np.nan  # If convergence fails
+            return np.nan
 
     def compute_roi(self, sim: Simulation) -> float:
         df = self.to_dataframe(sim)
-        years = (sim.end - sim.start).days / 365.25
-        # Initial investment: net cash out at start (from params if available, else approx min cumulative)
-        initial = sim.params.get('closing_fees', 0.0) + sim.params.get('appraisal', 0.0) * sim.params.get('down_fraction', 0.0) - sim.params.get('heloc_draw', 0.0)
-        if initial == 0: initial = -df['cumulative_cash'].min()  # Fallback
-        ending_net = df['net_worth'][-1]
-        return ((ending_net - initial) / initial / years) if initial > 0 else np.nan
+        initial_investment = -df['cash_flow'][df['type'] == 'purchase'].sum() if 'purchase' in df.columns else 0
+        ending_cash = df['cumulative_cash'][-1]
+        return (ending_cash - initial_investment) / initial_investment if initial_investment != 0 else np.nan
 
-    def compute_statistics(self) -> Dict:
-        dfs = [self.to_dataframe(s) for s in self.sims]
-        endings = {k: [df[k][-1] for df in dfs] for k in ['net_worth', 'cumulative_cash', 'property_value', 'total_loans']}
-        irrs = [self.compute_irr(s) for s in self.sims]
-        rois = [self.compute_roi(s) for s in self.sims]
-        breakevens = [ (df[df['net_worth'] > 0].index.min() - df.index.min()).days / 365.25 if any(df['net_worth'] > 0) else np.nan for df in dfs ]
-        stats = {
-            'net_worth_mean': np.mean(endings['net_worth']), 'net_worth_std': np.std(endings['net_worth']),
-            'net_worth_var_5pct': np.percentile(endings['net_worth'], 5),  # Value at Risk proxy (worst 5%)
-            'cash_mean': np.mean(endings['cumulative_cash']), 'cash_std': np.std(endings['cumulative_cash']),
-            'prop_mean': np.mean(endings['property_value']), 'prop_std': np.std(endings['property_value']),
-            'irr_mean': np.nanmean(irrs), 'irr_std': np.nanstd(irrs),
-            'roi_mean': np.nanmean(rois), 'roi_std': np.nanstd(rois),
-            'breakeven_years_mean': np.nanmean(breakevens),
-            'prob_positive_net_worth': np.mean([e > 0 for e in endings['net_worth']])
-        }
-        return stats
+    def compute_cap_rate(self, sim: Simulation) -> float:
+        df = self.to_dataframe(sim)
+        avg_noi = df['noi'].mean()
+        avg_property_value = df['property_value'].mean()
+        return avg_noi / avg_property_value if avg_property_value != 0 else np.nan
 
-    def plot_cumulative_cash_flows(self, title: str = "Cumulative Cash Flows"):
-        def get_color(fraction):
-            if fraction <= 0.5:
-                val = fraction / 0.5
-                r = 1
-                g = val
-                b = val
-            else:
-                val = (fraction - 0.5) / 0.5
-                r = 1 - val
-                g = 1 - val
-                b = 1
-            return (r, g, b)
-
-        dfs = [self.to_dataframe(sim) for sim in self.sims]
-        endings_net = [df['cumulative_cash'].iloc[-1] + df['property_value'].iloc[-1] for df in dfs]
-        sorted_indices = np.argsort(endings_net)
-        positions = np.linspace(0, len(self.sims) - 1, 11, dtype=int)
-        selected_indices = sorted_indices[positions]
-
-        min_x = min(df.index.min() for df in dfs)
-        max_x = max(df.index.max() for df in dfs)
-
-        plt.figure(figsize=(12, 6))
-        for df in dfs:
-            plt.plot(df.index, df['cumulative_cash'], color='black', alpha=0.1)
-
-        for i in reversed(range(11)):
-            idx = selected_indices[i]
-            percentile = i * 10
-            label = f"{percentile}th percentile ({self.sims[idx].name})"
-            color = get_color(i / 10.0)
-            plt.plot(dfs[idx].index, dfs[idx]['cumulative_cash'], color=color, label=label)
-
-        plt.title(title)
-        plt.xlabel("Time")
-        plt.ylabel("Cumulative Cash")
-        plt.xlim(min_x, max_x)
-        plt.margins(x=0)
-        plt.legend()
-        plt.grid(True)
-        plt.show()
-
-    def plot_property_values(self, title: str = "Property Values Over Time"):
-        def get_color(fraction):
-            if fraction <= 0.5:
-                val = fraction / 0.5
-                r = 1
-                g = val
-                b = val
-            else:
-                val = (fraction - 0.5) / 0.5
-                r = 1 - val
-                g = 1 - val
-                b = 1
-            return (r, g, b)
-
-        dfs = [self.to_dataframe(sim) for sim in self.sims]
-        endings_net = [df['cumulative_cash'].iloc[-1] + df['property_value'].iloc[-1] for df in dfs]
-        sorted_indices = np.argsort(endings_net)
-        positions = np.linspace(0, len(self.sims) - 1, 11, dtype=int)
-        selected_indices = sorted_indices[positions]
-
-        min_x = min(df.index.min() for df in dfs)
-        max_x = max(df.index.max() for df in dfs)
-
-        plt.figure(figsize=(12, 6))
-        for df in dfs:
-            plt.plot(df.index, df['property_value'], color='black', alpha=0.1)
-
-        for i in reversed(range(11)):
-            idx = selected_indices[i]
-            percentile = i * 10
-            label = f"{percentile}th percentile ({self.sims[idx].name})"
-            color = get_color(i / 10.0)
-            plt.plot(dfs[idx].index, dfs[idx]['property_value'], color=color, label=label)
-
-        plt.title(title)
-        plt.xlabel("Time")
-        plt.ylabel("Property Value")
-        plt.xlim(min_x, max_x)
-        plt.margins(x=0)
-        plt.legend()
-        plt.grid(True)
-        plt.show()
-
-    def plot_net_worth(self, title: str = "Net Worth Over Time Percentiles"):
-        def get_color(fraction):
-            if fraction <= 0.5:
-                val = fraction / 0.5
-                r = 1
-                g = val
-                b = val
-            else:
-                val = (fraction - 0.5) / 0.5
-                r = 1 - val
-                g = 1 - val
-                b = 1
-            return (r, g, b)
-
+    def plot_net_worth(self, title: str = "Net Worth Percentiles"):
         dfs = [self.to_dataframe(sim) for sim in self.sims]
         endings = [df['net_worth'][-1] for df in dfs]
         sorted_indices = np.argsort(endings)

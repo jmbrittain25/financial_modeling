@@ -3,11 +3,10 @@ from typing import Dict, Any, Optional
 from abc import ABC, abstractmethod
 import datetime as dt
 
-from .event import Event
 from .time_generator import Timing, OneTimeTiming, IntervalTiming, RandomTiming, SeasonalTiming
 from .value_generator import ValueGenerator, FixedValue, GrowingValue, DistributionValue, RateChangeValue, VariableRateLoanValue
 from .utils import create_distribution
-from .sim import Simulation
+
 
 @dataclass
 class Event:
@@ -34,11 +33,11 @@ class EventBuilder(ABC):
         pass
 
     @abstractmethod
-    def next_event_time(self, current: dt.datetime, sim: Simulation) -> Optional[dt.datetime]:
+    def next_event_time(self, current: dt.datetime, sim: 'Simulation') -> Optional[dt.datetime]:
         pass
 
     @abstractmethod
-    def generate_event(self, time: dt.datetime, sim: Simulation) -> Optional[Event]:
+    def generate_event(self, time: dt.datetime, sim: 'Simulation') -> Optional[Event]:
         pass
 
     @abstractmethod
@@ -63,15 +62,15 @@ class ComposedEventBuilder(EventBuilder):
         self.value_gen.reset()
         self.current_next = None
 
-    def next_event_time(self, current: dt.datetime, sim: Simulation) -> Optional[dt.datetime]:
+    def next_event_time(self, current: dt.datetime, sim: 'Simulation') -> Optional[dt.datetime]:
         if self.current_next is None or self.current_next <= current:
             nt = self.timing.next_time(current, sim.end)
-            while nt is not None and nt <= current:
+            while nt is not None and nt < current:
                 nt = self.timing.next_time(nt, sim.end)
             self.current_next = nt
         return self.current_next
 
-    def generate_event(self, time: dt.datetime, sim: Simulation) -> Optional[Event]:
+    def generate_event(self, time: dt.datetime, sim: 'Simulation') -> Optional[Event]:
         if self.next_event_time(time, sim) != time:
             return None
         cash_value, extra_meta = self.value_gen.get_value(time, sim)
@@ -79,6 +78,7 @@ class ComposedEventBuilder(EventBuilder):
         event = Event(time, cash_value, meta)
         if 'update_state' in extra_meta:
             sim.state.update(extra_meta['update_state'])
+        self.timing.advance()
         self.current_next = None  # Force recalc next
         return event
 

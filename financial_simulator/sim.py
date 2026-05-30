@@ -2,10 +2,9 @@ import datetime as dt
 import json
 import pickle
 from dataclasses import dataclass, field
-from typing import List, Dict
+from typing import List, Dict, Optional
 
-from .event import Event
-from .event_builder import EventBuilder
+from .event import Event, EventBuilder
 from .continuous_process import ContinuousProcess
 
 
@@ -33,23 +32,32 @@ class Simulation:
         current = self.start
         self.state_history[current] = self.state.copy()
         while True:
-            next_times = [b.next_event_time(current, self) for b in self.event_builders]
-            next_times = [t for t in next_times if t is not None and t <= self.end]
-            if not next_times:
+            # Pre-compute next times
+            builder_next_times = [(b, b.next_event_time(current, self)) for b in self.event_builders]
+            valid_next_times = [t for b, t in builder_next_times if t is not None and t <= self.end]
+            if not valid_next_times:
                 break
-            next_time = min(next_times)
+            next_time = min(valid_next_times)
+
+            # Advance continuous processes
             delta = next_time - current
             for proc in self.continuous_processes:
                 proc.advance(self.state, delta)
+
+            # Generate events only for builders whose next time matches the global next_time
             events_at_time = []
-            for b in self.event_builders:
-                if b.next_event_time(current, self) == next_time:
+            for b, nt in builder_next_times:
+                if nt == next_time:
                     event = b.generate_event(next_time, self)
                     if event:
                         events_at_time.append(event)
+
             self.events.extend(events_at_time)
+
+            # Update cumulative cash if tracked
             if 'cumulative_cash' in self.state:
                 self.state['cumulative_cash'] += sum(e.value for e in events_at_time)
+
             self.state_history[next_time] = self.state.copy()
             current = next_time
 

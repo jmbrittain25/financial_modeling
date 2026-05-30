@@ -1,6 +1,6 @@
 import datetime as dt
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import Optional, List
 import numpy as np
 
 
@@ -11,6 +11,10 @@ class Timing(ABC):
 
     @abstractmethod
     def next_time(self, current: dt.datetime, end: dt.datetime) -> Optional[dt.datetime]:
+        pass
+
+    @abstractmethod
+    def advance(self):
         pass
 
 
@@ -26,6 +30,9 @@ class OneTimeTiming(Timing):
         if not self.fired and current <= self.time <= end:
             return self.time
         return None
+
+    def advance(self):
+        self.fired = True
 
 
 class IntervalTiming(Timing):
@@ -46,7 +53,9 @@ class IntervalTiming(Timing):
             return None
         return self.current_next
 
-    # Advance is handled in builder after generate
+    def advance(self):
+        if self.current_next is not None:
+            self.current_next += self.interval
 
 
 class RandomTiming(Timing):
@@ -62,7 +71,7 @@ class RandomTiming(Timing):
         delta_days = (self.end - self.start).days
         if self.distribution == 'uniform':
             random_days = sorted(np.random.randint(0, delta_days + 1, self.n))
-            self.times = [self.start + dt.timedelta(days=d) for d in random_days]
+            self.times = [self.start + dt.timedelta(days=int(d)) for d in random_days]
         # Add other distributions if needed
         self.index = 0
 
@@ -73,9 +82,12 @@ class RandomTiming(Timing):
             return self.times[self.index]
         return None
 
+    def advance(self):
+        self.index += 1
+
 
 class SeasonalTiming(Timing):
-    def __init__(self, inner: Timing, months: list[int]):
+    def __init__(self, inner: Timing, months: List[int]):
         self.inner = inner
         self.months = set(months)
 
@@ -85,5 +97,9 @@ class SeasonalTiming(Timing):
     def next_time(self, current: dt.datetime, end: dt.datetime) -> Optional[dt.datetime]:
         nt = self.inner.next_time(current, end)
         while nt is not None and nt.month not in self.months:
-            nt = self.inner.next_time(nt, end)
+            self.inner.advance()
+            nt = self.inner.next_time(nt, end)  # Pass the previous nt to force progression
         return nt
+
+    def advance(self):
+        self.inner.advance()

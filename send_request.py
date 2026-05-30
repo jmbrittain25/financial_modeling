@@ -22,18 +22,35 @@ def send_and_monitor(server_url, config_file='config.json'):
     
     print(f"Job {job_id} submitted.")
     
-    # Poll status
+    last_status = None
+    last_progress = -1
+    last_message = ""
+    
     while True:
         status_res = requests.get(f"{server_url}/status/{job_id}")
         status = status_res.json()
-        print(f"Status: {status['progress']}% complete. Message: {status['message']}")
-        if status['status'] == 'completed':
+        
+        current_status = status.get('status', 'unknown')
+        current_progress = status.get('progress', 0)
+        current_message = status.get('message', '')
+        
+        if (current_status != last_status or
+            current_progress != last_progress or
+            current_message != last_message):
+            
+            print(f"Status: {current_progress}% complete ({current_status}). Message: {current_message}")
+            last_status = current_status
+            last_progress = current_progress
+            last_message = current_message
+        
+        if current_status == 'completed':
             break
-        elif status['status'] == 'failed':
-            print(f"Failed: {status['message']}")
+        elif current_status == 'failed':
+            print(f"Failed: {current_message}")  # Now includes stack trace
             return
-        time.sleep(5)
-    
+        
+        time.sleep(1)
+
     # Retrieve results
     results_res = requests.get(f"{server_url}/results/{job_id}")
     results = results_res.json()

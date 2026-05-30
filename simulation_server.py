@@ -4,8 +4,10 @@ import threading
 import uuid
 import datetime as dt
 import copy
+import traceback  # Add at the top of the file
 
 import financial_simulator as fs
+from financial_simulator.sim_builder import _build_one
 
 
 app = Flask(__name__)
@@ -14,17 +16,35 @@ jobs = {}
 
 
 def substitute(config: Any, params: Dict) -> Any:
+    if isinstance(config, dt.datetime):
+        return config.isoformat()
     if isinstance(config, dict):
         return {k: substitute(v, params) for k, v in config.items()}
     elif isinstance(config, list):
         return [substitute(v, params) for v in config]
-    elif isinstance(config, str) and config.startswith('${') and config.endswith('}'):
-        key = config[2:-1]
-        return params.get(key)
+    elif isinstance(config, str):
+        if config.startswith('-${') and config.endswith('}'):
+            key = config[3:-1]
+            val = substitute(params.get(key), params)
+            if not isinstance(val, (int, float)):
+                raise ValueError(f"Cannot negate non-numeric value for key '{key}'")
+            return -val
+        elif config.startswith('${') and config.endswith('}'):
+            key = config[2:-1]
+            return substitute(params.get(key), params)
     return config
 
 
 def create_simulation(params: Dict, base_config: Dict) -> fs.Simulation:
+    # Compute derived parameters
+    params['down_amount'] = params['appraisal'] * params['down_fraction']
+    params['closing_cost'] = -params['closing_fees']
+    params['purchase_cash'] = params['closing_cost'] - params['down_amount']  # Negative cash out
+    params['seller_principal'] = params['appraisal'] - params['down_amount'] - params['heloc_draw']
+    if params['seller_principal'] < 0:
+        params['seller_principal'] = 0  # Avoid negative principal
+    params['heloc_principal'] = params['heloc_draw']
+
     sub_config = substitute(copy.deepcopy(base_config['simulation']), params)
     start = dt.datetime.fromisoformat(sub_config['start'])
     end = dt.datetime.fromisoformat(sub_config['end'])
@@ -41,8 +61,19 @@ def run_simulations(config):
     job_id = config['job_id']
     try:
         param_distributions = {k: fs.create_distribution(v) for k, v in config['dists'].items()}
-        builder = fs.SimulationBuilder(lambda p: create_simulation(p, config), param_distributions)
-        sims = builder.build_simulations(config['num_simulations'], seed=config['seed'])
+        factory = lambda p: create_simulation(p, config)
+        num = config['num_simulations']
+        seed = config['seed']
+        sims = []
+        for i in range(num):
+            sim = _build_one(factory, param_distributions, seed, i)
+            sims.append(sim)
+            jobs[job_id]['progress'] = int(100 * (i + 1) / num)
+            jobs[job_id]['message'] = f'Completed {i + 1} of {num} simulations'
+        
+        # New: Signal analysis start
+        jobs[job_id]['message'] = 'Simulations complete. Analyzing results (computing stats, IRR, ROI)...'
+        
         analyzer = fs.SimulationAnalyzer(sims)
         stats = analyzer.compute_statistics()
         results = {
@@ -55,7 +86,8 @@ def run_simulations(config):
         jobs[job_id]['results'] = results
     except Exception as e:
         jobs[job_id]['status'] = 'failed'
-        jobs[job_id]['message'] = str(e)
+        jobs[job_id]['message'] = traceback.format_exc()  # Full stack trace
+
 
 @app.route('/simulate', methods=['POST'])
 def simulate():

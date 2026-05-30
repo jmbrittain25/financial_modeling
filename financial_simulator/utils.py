@@ -62,6 +62,7 @@ class TriangularDistribution(Distribution):
     def from_dict(cls, d: Dict) -> 'TriangularDistribution':
         return cls(d['low'], d['mode'], d['high'])
 
+
 class DateDistribution(Distribution):
     """Samples dates between start and end."""
     def __init__(self, start: dt.datetime, end: dt.datetime):
@@ -71,7 +72,7 @@ class DateDistribution(Distribution):
     def sample(self) -> dt.datetime:
         delta = (self.end - self.start).days
         random_days = np.random.randint(0, delta + 1)
-        return self.start + dt.timedelta(days=random_days)
+        return self.start + dt.timedelta(days=int(random_days))
 
     def to_dict(self) -> Dict:
         return {'type': 'DateDistribution', 'start': self.start.isoformat(), 'end': self.end.isoformat()}
