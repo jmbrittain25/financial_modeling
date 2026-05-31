@@ -70,3 +70,16 @@ def test_plot_and_stats_run_without_error():
     assert "mean" in stats
     assert stats["std"] > 0
     assert stats["p5"] < stats["median"] < stats["p95"]
+
+
+def test_streamlit_app_imports_without_legacy_crash():
+    """After merge cleanup, the main Streamlit app module must import without NameError
+    from removed dead code (the old 'Main Logic' block with undefined run_button etc.).
+    """
+    try:
+        import app.streamlit_app  # noqa: F401
+    except NameError as e:
+        raise AssertionError(f"Streamlit app still has undefined name from legacy code: {e}") from e
+    except ModuleNotFoundError:
+        # Acceptable in minimal test envs (missing pandas/streamlit/plotly)
+        pass

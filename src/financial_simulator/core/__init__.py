@@ -72,6 +72,7 @@ from .simulation import (
     MeanRevertingContinuousProcess,
     SimulationEngine,
     SimulationResult,
+    create_continuous_process,
 )
 from .stochastic import (
     GeometricBrownianMotion,
@@ -118,6 +119,7 @@ __all__ = [
     "GBMContinuousProcess",
     "MeanRevertingContinuousProcess",
     "AnyContinuousProcess",
+    "create_continuous_process",
     "SimulationResult",
     "SimulationEngine",
     # stochastic processes

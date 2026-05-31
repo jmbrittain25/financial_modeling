@@ -8,8 +8,9 @@ from financial_simulator.core import (
     MeanRevertingContinuousProcess,
     MeanRevertingProcess,
     SimulationEngine,
+    create_continuous_process,
 )
-from financial_simulator.core.simulation import AppreciationProcess
+from financial_simulator.core.simulation import AppreciationProcess, ContinuousProcess
 
 
 def test_gbm_continuous_reproducible_with_seed():
@@ -113,3 +114,70 @@ def test_appreciation_unaffected_by_rng_wiring():
     expected = 400_000.0 * (1.03**1.0)
     # Monthly stepping means the final delta is not exactly 1.0 year; allow small relative error
     assert abs(result.final_state["house"] - expected) < 200.0
+
+
+# =============================================================================
+# Deserialization + public factory tests (post-merge cleanup coverage)
+# =============================================================================
+
+
+def test_create_continuous_process_supports_all_types():
+    """The public helper + discriminated union must construct every supported process."""
+    app = create_continuous_process({"type": "appreciation", "rate": 0.04, "var": "home"})
+    assert isinstance(app, ContinuousProcess)
+    assert app.type == "appreciation"  # type: ignore[attr-defined]
+    assert app.rate == 0.04
+
+    gbm = create_continuous_process(
+        {
+            "type": "gbm",
+            "var": "portfolio",
+            "process": {"drift": 0.07, "volatility": 0.18},
+        }
+    )
+    assert gbm.type == "gbm"  # type: ignore[attr-defined]
+
+    mr = create_continuous_process(
+        {
+            "type": "mean_reverting",
+            "var": "rate",
+            "process": {"long_term_mean": 0.05, "speed": 1.2, "volatility": 0.005},
+        }
+    )
+    assert mr.type == "mean_reverting"  # type: ignore[attr-defined]
+
+
+def test_continuous_process_roundtrip_via_engine_from_dict():
+    """Full cycle: model_dump -> from_dict must preserve all three continuous process types."""
+    from datetime import datetime
+
+    eng = SimulationEngine(
+        name="roundtrip",
+        start=datetime(2026, 1, 1),
+        end=datetime(2026, 12, 31),
+        initial_state={"val": 100.0},
+        continuous_processes=[
+            create_continuous_process({"type": "appreciation", "rate": 0.05, "var": "val"}),
+            create_continuous_process(
+                {"type": "gbm", "var": "val2", "process": {"drift": 0.1, "volatility": 0.2}}
+            ),
+        ],
+    )
+    data = eng.to_dict()
+    restored = SimulationEngine.from_dict(data)
+
+    assert len(restored.continuous_processes) == 2
+    types = [p.type for p in restored.continuous_processes]  # type: ignore[attr-defined]
+    assert "appreciation" in types
+    assert "gbm" in types
+
+
+def test_cli_legacy_appreciation_fallback_still_works():
+    """Old user configs with type=Appreciation or bare rate dicts must still load via CLI helper."""
+    from financial_simulator.cli import _create_continuous_process as cli_create
+
+    p1 = cli_create({"type": "Appreciation", "rate": 0.03, "var": "house"})
+    assert p1.type == "appreciation"  # normalized  # type: ignore[attr-defined]
+
+    p2 = cli_create({"rate": 0.02, "var": "savings"})  # bare legacy shape
+    assert p2.type == "appreciation"  # type: ignore[attr-defined]

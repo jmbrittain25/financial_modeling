@@ -10,8 +10,12 @@ from typing import Any
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-from ..core import SimulationEngine, SimulationResult, create_event_builder
-from ..core.simulation import AppreciationProcess
+from ..core import (
+    SimulationEngine,
+    SimulationResult,
+    create_continuous_process,
+    create_event_builder,
+)
 
 app = FastAPI(
     title="Financial Simulator API",
@@ -44,8 +48,7 @@ async def run_simulation(req: RunSimulationRequest):
         builders = [create_event_builder(b) for b in sim.get("builders", [])]
         procs = []
         for p in sim.get("continuous_processes", []):
-            if p.get("type") == "Appreciation":
-                procs.append(AppreciationProcess.model_validate(p))
+            procs.append(create_continuous_process(p))
 
         engine = SimulationEngine(
             name=sim.get("name", "api-simulation"),

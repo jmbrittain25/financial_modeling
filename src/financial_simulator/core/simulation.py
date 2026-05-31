@@ -139,6 +139,22 @@ AnyContinuousProcess = Annotated[
 _continuous_adapter: TypeAdapter[AnyContinuousProcess] = TypeAdapter(AnyContinuousProcess)
 
 
+def create_continuous_process(data: dict[str, Any] | ContinuousProcess) -> ContinuousProcess:
+    """Create any supported ContinuousProcess from a dict (or pass-through an instance).
+
+    Uses the discriminated union (AnyContinuousProcess) with 'type' field:
+        - "appreciation" → AppreciationProcess
+        - "gbm" → GBMContinuousProcess
+        - "mean_reverting" → MeanRevertingContinuousProcess
+
+    This is the recommended way for CLI, API, UI, and deserialization.
+    Fully supports the modern schema produced by model_dump(mode="json").
+    """
+    if isinstance(data, ContinuousProcess):
+        return data
+    return _continuous_adapter.validate_python(data)
+
+
 # =============================================================================
 # Result object (what you get after engine.run())
 # =============================================================================
@@ -374,6 +390,7 @@ __all__ = [
     "GBMContinuousProcess",
     "MeanRevertingContinuousProcess",
     "AnyContinuousProcess",
+    "create_continuous_process",
     "SimulationResult",
     "SimulationEngine",
 ]

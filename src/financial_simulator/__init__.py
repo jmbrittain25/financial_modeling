@@ -16,6 +16,7 @@ from .core import (
     SimulationEngine,
     SimulationResult,
     TaxSchedule,
+    create_continuous_process,
     create_event_builder,
 )
 
@@ -36,6 +37,7 @@ __all__ = [
     "GeometricBrownianMotion",
     "MeanRevertingProcess",
     "AnyContinuousProcess",
+    "create_continuous_process",
     "Loan",
     "TaxSchedule",
     "Portfolio",

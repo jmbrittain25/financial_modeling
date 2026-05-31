@@ -66,8 +66,10 @@ def build_engine(
             "gbm_continuous",
             "mean_revert_continuous",
         ):
-            # Stubs for Phase 5+ — create the appropriate ContinuousProcess
-            # For now we log a warning by not crashing and do nothing (UI will gate them)
+            # Phase 5+ external stochastic drivers (separate from engine continuous_processes).
+            # These will eventually create GBMContinuousProcess / MeanRevertingContinuousProcess
+            # instances (or dedicated driver wrappers) and wire them as external inputs.
+            # For now: gracefully ignored (UI + templates gate them).
             pass
 
     return eng

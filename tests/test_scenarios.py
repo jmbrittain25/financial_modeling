@@ -16,6 +16,7 @@ from financial_simulator.scenarios import (
     SavedDistribution,
     ScenarioConfig,
     build_engine,
+    load_template,
     run_monte_carlo,
     run_single,
     scenario_from_json,
@@ -188,3 +189,20 @@ def test_distribution_library_crud():
     js = json.dumps(lib.to_dict())
     loaded = DistributionLibrary.from_dict(json.loads(js))
     assert loaded.get_by_name("Fed Rate") is not None
+
+
+def test_template_with_continuous_processes_runs_end_to_end():
+    """Templates that declare continuous_processes (e.g. appreciation) must materialize and run cleanly."""
+    cfg = load_template("retirement_30yr")
+    assert len(cfg.continuous_processes) >= 1
+
+    # Single run exercises materialization + engine with continuous processes
+    res = run_single(cfg, seed=42)
+    assert "portfolio_value" in res.final_state or "cumulative_cash" in res.final_state
+    assert res.final_state.get("portfolio_value", 0) > 0
+
+    # Small MC also works (uses the same path)
+    results = run_monte_carlo(cfg, n_sims=3, base_seed=99, n_jobs=1)
+    assert len(results) == 3
+    for r in results:
+        assert r.final_state.get("portfolio_value", 0) > 0

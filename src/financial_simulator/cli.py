@@ -8,10 +8,10 @@ Usage examples:
     simulate run -c config.yaml --dry-run
     python -m financial_simulator run --config ...
 
-This v1 intentionally supports only simple/modern config shapes
-(the structure under "simulation" or top-level with start/end + builders).
-Full legacy config.json support (dists, ${} substitution, derived params)
-is planned for a follow-up.
+This supports modern config shapes (start/end + builders + continuous_processes
+using the discriminated union). Continuous processes now support all three types
+(appreciation, gbm, mean_reverting) via the public create_continuous_process helper.
+Legacy bare "rate" dicts and old "Appreciation" strings are still accepted for compatibility.
 """
 
 from __future__ import annotations
@@ -26,9 +26,10 @@ import yaml
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from .core import (
-    AppreciationProcess,
+    ContinuousProcess,
     SimulationEngine,
     SimulationResult,
+    create_continuous_process,
     create_event_builder,
 )
 
@@ -78,12 +79,24 @@ def load_config(path: Path) -> dict[str, Any]:
     return json.loads(text)
 
 
-def _create_continuous_process(d: dict[str, Any]) -> AppreciationProcess:
-    """Minimal factory for continuous processes (only Appreciation supported in v1)."""
-    if d.get("type") == "Appreciation" or "rate" in d:
-        data = {k: v for k, v in d.items() if k != "type"}
-        return AppreciationProcess.model_validate(data)
-    raise ValueError(f"Unsupported continuous process (only Appreciation in v1): {d}")
+def _create_continuous_process(d: dict[str, Any]) -> ContinuousProcess:
+    """Create a ContinuousProcess from a dict using the modern discriminated union.
+
+    Supports all current types via 'type' discriminator:
+        "appreciation", "gbm", "mean_reverting"
+    Falls back gracefully for simple rate-only dicts (assumes Appreciation).
+    """
+    if isinstance(d, ContinuousProcess):
+        return d
+    # Legacy fallback: bare {"rate": 0.04} or type=="Appreciation"
+    if d.get("type") in (None, "Appreciation", "appreciation") or "rate" in d:
+        # Normalize to modern discriminator for the adapter
+        dd = dict(d)
+        dd.setdefault("type", "appreciation")
+        if "type" in dd and dd["type"] == "Appreciation":
+            dd["type"] = "appreciation"
+        d = dd
+    return create_continuous_process(d)
 
 
 def build_engine(cfg: dict[str, Any], seed: int | None = None) -> SimulationEngine:
@@ -110,7 +123,7 @@ def build_engine(cfg: dict[str, Any], seed: int | None = None) -> SimulationEngi
     # Build using the core factories (the key reuse point)
     builders = [create_event_builder(b) for b in sim.get("builders", [])]
 
-    procs: list[AppreciationProcess] = []
+    procs = []
     for p in sim.get("continuous_processes", []):
         procs.append(_create_continuous_process(p))
 
