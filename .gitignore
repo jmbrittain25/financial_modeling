@@ -24,3 +24,6 @@ app/data/user_scenarios/
 app/data/custom_distributions.json
 app/data/*.tmp
 *.local.json
+
+# Hypothesis testing cache
+.hypothesis/
