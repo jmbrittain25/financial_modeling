@@ -23,10 +23,15 @@ from __future__ import annotations
 
 import datetime as dt
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Literal, Union
+
+try:
+    from typing import Annotated  # py >= 3.9
+except ImportError:
+    from typing_extensions import Annotated
 
 import numpy as np
-from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, TypeAdapter
 
 from .event import Event, EventBuilder, ComposedEventBuilder
 from .stochastic import GeometricBrownianMotion, MeanRevertingProcess
@@ -47,8 +52,18 @@ class ContinuousProcess(BaseModel, ABC):
     name: Optional[str] = None
 
     @abstractmethod
-    def advance(self, state: Dict[str, Any], delta: dt.timedelta) -> None:
-        """Mutate the provided state dict in place for the elapsed time."""
+    def advance(
+        self,
+        state: Dict[str, Any],
+        delta: dt.timedelta,
+        rng: Optional[np.random.Generator] = None,
+    ) -> None:
+        """Mutate the provided state dict in place for the elapsed time.
+
+        The optional rng enables reproducible stochastic continuous processes
+        (GBM, MeanReverting). Backward-compatible: existing calls without rng
+        continue to work and fall back to non-deterministic sampling.
+        """
         ...
 
 
@@ -58,10 +73,16 @@ class AppreciationProcess(ContinuousProcess):
     state[var] *= (1 + rate) ** (delta_years)
     """
 
+    type: Literal["appreciation"] = "appreciation"
     rate: float = Field(description="Annual growth rate (e.g. 0.04 for 4%)")
     var: str = Field(default="property_value", description="State key to compound")
 
-    def advance(self, state: Dict[str, Any], delta: dt.timedelta) -> None:
+    def advance(
+        self,
+        state: Dict[str, Any],
+        delta: dt.timedelta,
+        rng: Optional[np.random.Generator] = None,
+    ) -> None:
         if self.var not in state:
             return
         years = delta.total_seconds() / (365.25 * 24 * 3600)
@@ -72,29 +93,50 @@ class AppreciationProcess(ContinuousProcess):
 class GBMContinuousProcess(ContinuousProcess):
     """Continuous process driven by Geometric Brownian Motion."""
 
+    type: Literal["gbm"] = "gbm"
     process: GeometricBrownianMotion
     var: str
 
-    def advance(self, state: Dict[str, Any], delta: dt.timedelta) -> None:
+    def advance(
+        self,
+        state: Dict[str, Any],
+        delta: dt.timedelta,
+        rng: Optional[np.random.Generator] = None,
+    ) -> None:
         if self.var not in state:
             return
         current = state[self.var]
-        new_val = self.process.step(current, delta)
+        new_val = self.process.step(current, delta, rng=rng)
         state[self.var] = new_val
 
 
 class MeanRevertingContinuousProcess(ContinuousProcess):
     """Continuous process driven by a mean-reverting stochastic process."""
 
+    type: Literal["mean_reverting"] = "mean_reverting"
     process: MeanRevertingProcess
     var: str
 
-    def advance(self, state: Dict[str, Any], delta: dt.timedelta) -> None:
+    def advance(
+        self,
+        state: Dict[str, Any],
+        delta: dt.timedelta,
+        rng: Optional[np.random.Generator] = None,
+    ) -> None:
         if self.var not in state:
             return
         current = state[self.var]
-        new_val = self.process.step(current, delta)
+        new_val = self.process.step(current, delta, rng=rng)
         state[self.var] = new_val
+
+
+# Discriminated union for ContinuousProcess (used for serialization, UI, materialization)
+AnyContinuousProcess = Annotated[
+    Union[AppreciationProcess, GBMContinuousProcess, MeanRevertingContinuousProcess],
+    Field(discriminator="type"),
+]
+
+_continuous_adapter: TypeAdapter[AnyContinuousProcess] = TypeAdapter(AnyContinuousProcess)
 
 
 # =============================================================================
@@ -234,7 +276,7 @@ class SimulationEngine(BaseModel):
             # 3. Let continuous processes evolve over the interval
             delta = next_time - current
             for proc in self.continuous_processes:
-                proc.advance(self.state, delta)
+                proc.advance(self.state, delta, self._rng)
 
             # 4. Generate events from all builders that fire exactly at next_time
             events_at_time: List[Event] = []
@@ -303,16 +345,17 @@ class SimulationEngine(BaseModel):
         """Rehydrate a SimulationEngine from a serialized configuration.
 
         Note: runtime state (events, current state) is not restored; call run() again.
+        Supports the modern discriminated "type" fields for continuous processes.
         """
         builders = [ComposedEventBuilder.from_dict(b) for b in data.get("event_builders", [])]
-        # Continuous processes - only Appreciation for now; extend as needed
+
+        # Use the discriminated union + adapter for robust deserialization of all known process types
         procs: List[ContinuousProcess] = []
         for p in data.get("continuous_processes", []):
-            if p.get("type") == "Appreciation" or "rate" in p:  # heuristic
-                procs.append(AppreciationProcess.model_validate(p))
+            if isinstance(p, ContinuousProcess):
+                procs.append(p)
             else:
-                # Future: registry of continuous process types
-                procs.append(AppreciationProcess.model_validate(p))
+                procs.append(_continuous_adapter.validate_python(p))
 
         eng = cls(
             name=data.get("name", "restored-simulation"),
@@ -329,6 +372,9 @@ class SimulationEngine(BaseModel):
 __all__ = [
     "ContinuousProcess",
     "AppreciationProcess",
+    "GBMContinuousProcess",
+    "MeanRevertingContinuousProcess",
+    "AnyContinuousProcess",
     "SimulationResult",
     "SimulationEngine",
 ]
