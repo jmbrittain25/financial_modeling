@@ -23,12 +23,12 @@ from __future__ import annotations
 
 import datetime as dt
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, Literal
 
 try:
     from typing import Annotated  # py >= 3.9
 except ImportError:
-    from typing_extensions import Annotated
+    from typing import Annotated
 
 import numpy as np
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, TypeAdapter
@@ -132,7 +132,7 @@ class MeanRevertingContinuousProcess(ContinuousProcess):
 
 # Discriminated union for ContinuousProcess (used for serialization, UI, materialization)
 AnyContinuousProcess = Annotated[
-    Union[AppreciationProcess, GBMContinuousProcess, MeanRevertingContinuousProcess],
+    AppreciationProcess | GBMContinuousProcess | MeanRevertingContinuousProcess,
     Field(discriminator="type"),
 ]
 

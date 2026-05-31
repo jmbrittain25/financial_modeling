@@ -13,27 +13,22 @@ Designed to be dropped into any Streamlit page.
 
 from __future__ import annotations
 
-from typing import Any, Callable, Dict, Optional, Tuple
+from collections.abc import Callable
+from typing import Any
 
 import numpy as np
 
 from financial_simulator.core.distributions import (
     AnyDistribution,
-    BetaDistribution,
-    ConstantDistribution,
-    ExponentialDistribution,
-    LogNormalDistribution,
     NormalDistribution,
-    TriangularDistribution,
-    UniformDistribution,
     create_distribution,
 )
 from financial_simulator.scenarios.models import SavedDistribution
 
-
 # -----------------------------------------------------------------------------
 # Analytical PDF helpers (pure numpy, no scipy dependency)
 # -----------------------------------------------------------------------------
+
 
 def _normal_pdf(x: np.ndarray, mean: float, std: float) -> np.ndarray:
     coeff = 1.0 / (std * np.sqrt(2 * np.pi))
@@ -90,6 +85,7 @@ def _lognormal_pdf(x: np.ndarray, mean: float, sigma: float) -> np.ndarray:
 def _beta_pdf(x: np.ndarray, alpha: float, beta: float) -> np.ndarray:
     """Simple Beta PDF using gamma functions (available in numpy)."""
     from math import gamma
+
     if alpha <= 0 or beta <= 0:
         return np.zeros_like(x)
     B = gamma(alpha) * gamma(beta) / gamma(alpha + beta)
@@ -100,7 +96,7 @@ def _beta_pdf(x: np.ndarray, alpha: float, beta: float) -> np.ndarray:
     )
 
 
-def get_analytical_pdf(dist: AnyDistribution, x_grid: np.ndarray) -> Optional[np.ndarray]:
+def get_analytical_pdf(dist: AnyDistribution, x_grid: np.ndarray) -> np.ndarray | None:
     """Return PDF values on x_grid if analytical form is easy; else None."""
     t = getattr(dist, "type", None)
     try:
@@ -128,9 +124,10 @@ def get_analytical_pdf(dist: AnyDistribution, x_grid: np.ndarray) -> Optional[np
 # Plotting
 # -----------------------------------------------------------------------------
 
+
 def plot_distribution_preview(
     dist: AnyDistribution,
-    title: Optional[str] = None,
+    title: str | None = None,
     n_samples: int = 6000,
     seed: int = 42,
 ):
@@ -176,7 +173,12 @@ def plot_distribution_preview(
     try:
         mean_val = float(np.mean(samples))
         std_val = float(np.std(samples))
-        fig.add_vline(x=mean_val, line=dict(color="black", width=2, dash="dash"), annotation_text="mean", annotation_position="top left")
+        fig.add_vline(
+            x=mean_val,
+            line=dict(color="black", width=2, dash="dash"),
+            annotation_text="mean",
+            annotation_position="top left",
+        )
         if std_val > 0:
             fig.add_vline(x=mean_val - std_val, line=dict(color="gray", width=1, dash="dot"))
             fig.add_vline(x=mean_val + std_val, line=dict(color="gray", width=1, dash="dot"))
@@ -200,7 +202,9 @@ def plot_distribution_preview(
     return fig
 
 
-def get_distribution_stats(dist: AnyDistribution, n_samples: int = 8000, seed: int = 42) -> Dict[str, float]:
+def get_distribution_stats(
+    dist: AnyDistribution, n_samples: int = 8000, seed: int = 42
+) -> dict[str, float]:
     """Quick numeric summary for the UI."""
     rng = np.random.default_rng(seed)
     samples = np.array([dist.sample(rng) for _ in range(n_samples)])
@@ -219,7 +223,7 @@ def get_distribution_stats(dist: AnyDistribution, n_samples: int = 8000, seed: i
 # Parameter schemas (for dynamic UI)
 # -----------------------------------------------------------------------------
 
-DIST_TYPE_LABELS: Dict[str, str] = {
+DIST_TYPE_LABELS: dict[str, str] = {
     "normal": "Normal (Gaussian)",
     "uniform": "Uniform",
     "triangular": "Triangular (PERT-style)",
@@ -232,7 +236,7 @@ DIST_TYPE_LABELS: Dict[str, str] = {
 DIST_TYPE_ORDER = list(DIST_TYPE_LABELS.keys())
 
 
-def get_default_params(dist_type: str) -> Dict[str, Any]:
+def get_default_params(dist_type: str) -> dict[str, Any]:
     """Reasonable starting values for each type."""
     if dist_type == "normal":
         return {"mean": 0.0, "std": 1.0}
@@ -253,9 +257,9 @@ def get_default_params(dist_type: str) -> Dict[str, Any]:
 
 def render_distribution_picker(
     key_prefix: str = "dist_picker",
-    initial: Optional[AnyDistribution] = None,
-    library: Optional[Any] = None,  # DistributionLibrary to avoid circular import
-    on_save_callback: Optional[Callable[[SavedDistribution], None]] = None,
+    initial: AnyDistribution | None = None,
+    library: Any | None = None,  # DistributionLibrary to avoid circular import
+    on_save_callback: Callable[[SavedDistribution], None] | None = None,
     show_save_section: bool = True,
     height: int = 420,
 ):
@@ -295,31 +299,80 @@ def render_distribution_picker(
     cols = st.columns(3 if dist_type in ("triangular", "beta") else 2)
 
     if dist_type == "normal":
-        params["mean"] = cols[0].number_input("Mean (μ)", value=float(params["mean"]), step=0.1, key=f"{key_prefix}_mean")
-        params["std"] = cols[1].number_input("Std Dev (σ) > 0", value=float(params["std"]), min_value=0.001, step=0.1, key=f"{key_prefix}_std")
+        params["mean"] = cols[0].number_input(
+            "Mean (μ)", value=float(params["mean"]), step=0.1, key=f"{key_prefix}_mean"
+        )
+        params["std"] = cols[1].number_input(
+            "Std Dev (σ) > 0",
+            value=float(params["std"]),
+            min_value=0.001,
+            step=0.1,
+            key=f"{key_prefix}_std",
+        )
 
     elif dist_type == "uniform":
-        params["low"] = cols[0].number_input("Low (minimum)", value=float(params["low"]), step=0.1, key=f"{key_prefix}_low")
-        params["high"] = cols[1].number_input("High (maximum) ≥ low", value=float(params["high"]), step=0.1, key=f"{key_prefix}_high")
+        params["low"] = cols[0].number_input(
+            "Low (minimum)", value=float(params["low"]), step=0.1, key=f"{key_prefix}_low"
+        )
+        params["high"] = cols[1].number_input(
+            "High (maximum) ≥ low", value=float(params["high"]), step=0.1, key=f"{key_prefix}_high"
+        )
 
     elif dist_type == "triangular":
-        params["low"] = cols[0].number_input("Low (pessimistic)", value=float(params["low"]), step=0.1, key=f"{key_prefix}_low")
-        params["mode"] = cols[1].number_input("Mode (most likely)", value=float(params["mode"]), step=0.1, key=f"{key_prefix}_mode")
-        params["high"] = cols[2].number_input("High (optimistic) ≥ mode", value=float(params["high"]), step=0.1, key=f"{key_prefix}_high")
+        params["low"] = cols[0].number_input(
+            "Low (pessimistic)", value=float(params["low"]), step=0.1, key=f"{key_prefix}_low"
+        )
+        params["mode"] = cols[1].number_input(
+            "Mode (most likely)", value=float(params["mode"]), step=0.1, key=f"{key_prefix}_mode"
+        )
+        params["high"] = cols[2].number_input(
+            "High (optimistic) ≥ mode",
+            value=float(params["high"]),
+            step=0.1,
+            key=f"{key_prefix}_high",
+        )
 
     elif dist_type == "lognormal":
-        params["mean"] = cols[0].number_input("Mean of log (μ)", value=float(params["mean"]), step=0.1, key=f"{key_prefix}_mean")
-        params["sigma"] = cols[1].number_input("Sigma (σ) > 0", value=float(params["sigma"]), min_value=0.001, step=0.05, key=f"{key_prefix}_sigma")
+        params["mean"] = cols[0].number_input(
+            "Mean of log (μ)", value=float(params["mean"]), step=0.1, key=f"{key_prefix}_mean"
+        )
+        params["sigma"] = cols[1].number_input(
+            "Sigma (σ) > 0",
+            value=float(params["sigma"]),
+            min_value=0.001,
+            step=0.05,
+            key=f"{key_prefix}_sigma",
+        )
 
     elif dist_type == "exponential":
-        params["rate"] = cols[0].number_input("Rate (λ) > 0", value=float(params["rate"]), min_value=0.001, step=0.1, key=f"{key_prefix}_rate")
+        params["rate"] = cols[0].number_input(
+            "Rate (λ) > 0",
+            value=float(params["rate"]),
+            min_value=0.001,
+            step=0.1,
+            key=f"{key_prefix}_rate",
+        )
 
     elif dist_type == "beta":
-        params["alpha"] = cols[0].number_input("Alpha (α) > 0", value=float(params["alpha"]), min_value=0.01, step=0.1, key=f"{key_prefix}_alpha")
-        params["beta"] = cols[1].number_input("Beta (β) > 0", value=float(params["beta"]), min_value=0.01, step=0.1, key=f"{key_prefix}_beta")
+        params["alpha"] = cols[0].number_input(
+            "Alpha (α) > 0",
+            value=float(params["alpha"]),
+            min_value=0.01,
+            step=0.1,
+            key=f"{key_prefix}_alpha",
+        )
+        params["beta"] = cols[1].number_input(
+            "Beta (β) > 0",
+            value=float(params["beta"]),
+            min_value=0.01,
+            step=0.1,
+            key=f"{key_prefix}_beta",
+        )
 
     elif dist_type == "constant":
-        params["value"] = cols[0].number_input("Constant Value", value=float(params["value"]), step=1.0, key=f"{key_prefix}_value")
+        params["value"] = cols[0].number_input(
+            "Constant Value", value=float(params["value"]), step=1.0, key=f"{key_prefix}_value"
+        )
 
     # Build the actual distribution object
     try:
@@ -347,19 +400,27 @@ def render_distribution_picker(
     if library is not None and hasattr(library, "distributions") and library.distributions:
         st.markdown("#### Load from My Library")
         names = [f"{d.name} ({d.id})" for d in library.distributions]
-        choice = st.selectbox("Choose saved distribution", options=["—"] + names, key=f"{key_prefix}_load")
+        choice = st.selectbox(
+            "Choose saved distribution", options=["—"] + names, key=f"{key_prefix}_load"
+        )
         if choice != "—":
             idx = names.index(choice)
             saved = library.distributions[idx]
-            st.info(f"Loaded **{saved.name}**. You can tweak the parameters above and save a new copy.")
+            st.info(
+                f"Loaded **{saved.name}**. You can tweak the parameters above and save a new copy."
+            )
             # Note: we don't auto-switch here to keep the UI simple; user can copy params manually or we could add a "Load into editor" button.
 
     # Save section
     if show_save_section:
         st.markdown("#### 💾 Save to My Library")
         with st.expander("Save this configuration for reuse in other scenarios", expanded=False):
-            save_name = st.text_input("Name", value=f"My {DIST_TYPE_LABELS[dist_type]}", key=f"{key_prefix}_save_name")
-            save_desc = st.text_area("Description (optional)", key=f"{key_prefix}_save_desc", height=80)
+            save_name = st.text_input(
+                "Name", value=f"My {DIST_TYPE_LABELS[dist_type]}", key=f"{key_prefix}_save_name"
+            )
+            save_desc = st.text_area(
+                "Description (optional)", key=f"{key_prefix}_save_desc", height=80
+            )
             save_tags = st.text_input("Tags (comma-separated)", key=f"{key_prefix}_save_tags")
 
             if st.button("Save to Library", type="primary", key=f"{key_prefix}_save_btn"):
@@ -380,7 +441,9 @@ def render_distribution_picker(
                         except Exception as e:
                             st.error(f"Failed to save: {e}")
                     else:
-                        st.success("Distribution ready to be saved (no callback registered in this context).")
+                        st.success(
+                            "Distribution ready to be saved (no callback registered in this context)."
+                        )
                         st.json(saved.model_dump(mode="json"))
 
     return dist

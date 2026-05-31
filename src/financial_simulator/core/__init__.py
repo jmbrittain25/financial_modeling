@@ -65,11 +65,11 @@ from .financial_models import (
     TaxSchedule,
 )
 from .simulation import (
+    AnyContinuousProcess,
     AppreciationProcess,
     ContinuousProcess,
     GBMContinuousProcess,
     MeanRevertingContinuousProcess,
-    AnyContinuousProcess,
     SimulationEngine,
     SimulationResult,
 )

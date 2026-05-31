@@ -3,29 +3,24 @@
 import json
 from datetime import datetime, timedelta
 
-import numpy as np
-import pytest
-
 from financial_simulator.core import (
     ComposedEventBuilder,
-    IntervalTiming,
     FixedValue,
+    IntervalTiming,
     NormalDistribution,
-    TriangularDistribution,
 )
 from financial_simulator.scenarios import (
-    ScenarioConfig,
-    SavedDistribution,
-    DistributionLibrary,
     CustomMetric,
     DiscreteRateDriver,
+    DistributionLibrary,
+    SavedDistribution,
+    ScenarioConfig,
     build_engine,
-    run_single,
     run_monte_carlo,
-    scenario_to_json,
+    run_single,
     scenario_from_json,
+    scenario_to_json,
 )
-from financial_simulator.scenarios.metrics import compute_metric
 
 
 def test_scenario_config_roundtrip_json():
@@ -97,7 +92,9 @@ def test_custom_metric_final_state_value():
         end=end,
         initial_state={"portfolio": 100_000.0},
         custom_metrics=[
-            CustomMetric(name="final_portfolio", metric_type="final_state_value", params={"key": "portfolio"})
+            CustomMetric(
+                name="final_portfolio", metric_type="final_state_value", params={"key": "portfolio"}
+            )
         ],
     )
 
@@ -120,16 +117,24 @@ def test_custom_metric_max_drawdown():
         initial_state={"cumulative_cash": 0.0},
         event_builders=[
             ComposedEventBuilder(
-                timing=IntervalTiming(interval=timedelta(days=30), start_time=start + timedelta(days=1)),
+                timing=IntervalTiming(
+                    interval=timedelta(days=30), start_time=start + timedelta(days=1)
+                ),
                 value_gen=FixedValue(value=12000.0),  # creates the peak
             ),
             ComposedEventBuilder(
-                timing=IntervalTiming(interval=timedelta(days=30), start_time=start + timedelta(days=40)),
+                timing=IntervalTiming(
+                    interval=timedelta(days=30), start_time=start + timedelta(days=40)
+                ),
                 value_gen=FixedValue(value=-2500.0),  # repeated outflows
             ),
         ],
         custom_metrics=[
-            CustomMetric(name="mdd", metric_type="max_drawdown_on_path", params={"state_key": "cumulative_cash"})
+            CustomMetric(
+                name="mdd",
+                metric_type="max_drawdown_on_path",
+                params={"state_key": "cumulative_cash"},
+            )
         ],
     )
 
@@ -155,7 +160,11 @@ def test_monte_carlo_with_custom_metrics_attached():
             )
         ],
         custom_metrics=[
-            CustomMetric(name="final_cash", metric_type="final_state_value", params={"key": "cumulative_cash"})
+            CustomMetric(
+                name="final_cash",
+                metric_type="final_state_value",
+                params={"key": "cumulative_cash"},
+            )
         ],
     )
 

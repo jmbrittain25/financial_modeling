@@ -7,8 +7,8 @@ Run with:
 
 import streamlit as st
 
-from financial_simulator.scenarios import DistributionLibrary
 from app.components.distribution_viz import render_distribution_picker
+from financial_simulator.scenarios import DistributionLibrary
 
 st.set_page_config(page_title="Distribution Picker Smoke", layout="wide")
 st.title("🎲 Distribution Picker — Live Demo")
@@ -25,11 +25,13 @@ This is a standalone smoke test for the core interactive component built in Phas
 if "library" not in st.session_state:
     st.session_state.library = DistributionLibrary()
 
+
 def handle_save(saved):
     try:
         st.session_state.library.add(saved)
     except ValueError as e:
         st.warning(str(e))
+
 
 col1, col2 = st.columns([2, 1])
 

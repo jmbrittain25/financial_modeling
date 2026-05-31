@@ -9,9 +9,8 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional
 
-from .models import ScenarioConfig, DistributionLibrary, SavedDistribution
+from .models import DistributionLibrary, ScenarioConfig
 
 # Default location for committed templates (relative to this file or repo root)
 TEMPLATES_DIR = Path(__file__).parent.parent.parent.parent / "app" / "data" / "templates"
@@ -51,7 +50,8 @@ def save_distribution_library(lib: DistributionLibrary, path: Path) -> None:
 # Template helpers (Phase 3+)
 # -----------------------------------------------------------------------------
 
-def list_templates() -> List[str]:
+
+def list_templates() -> list[str]:
     """Return names of all committed scenario templates (without .json)."""
     if not TEMPLATES_DIR.exists():
         return []

@@ -9,24 +9,29 @@ Run with:
     streamlit run app/streamlit_app.py
 """
 
-import streamlit as st
-import pandas as pd
-import plotly.graph_objects as go
 from datetime import datetime, timedelta
 
+import pandas as pd
+import plotly.graph_objects as go
+import streamlit as st
+
+from app.components.distribution_viz import render_distribution_picker
 from financial_simulator.core import SimulationResult
-from financial_simulator.core.event import ComposedEventBuilder, IntervalTiming, FixedValue
+from financial_simulator.core.event import ComposedEventBuilder, FixedValue, IntervalTiming
 from financial_simulator.monte_carlo import MonteCarloRunner
 from financial_simulator.scenarios import (
-    ScenarioConfig, list_templates, load_template,
-    build_engine, run_single, run_monte_carlo,
+    ScenarioConfig,
+    list_templates,
+    load_template,
+    run_monte_carlo,
+    run_single,
 )
-from app.components.distribution_viz import render_distribution_picker
 
 # Optional legacy examples (still supported)
 try:
-    from examples.retirement import create_retirement_engine
     from examples.business_cashflow import create_business_engine
+    from examples.retirement import create_retirement_engine
+
     HAS_LEGACY = True
 except Exception:
     HAS_LEGACY = False
@@ -36,7 +41,7 @@ st.set_page_config(
     page_title="Financial Simulator — Scenario Builder",
     page_icon="📈",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
 )
 
 st.title("Financial Simulation Platform")
@@ -72,6 +77,7 @@ if "results" not in st.session_state:
 
 if "lib" not in st.session_state:
     from financial_simulator.scenarios import DistributionLibrary
+
     st.session_state.lib = DistributionLibrary()
 
 current: ScenarioConfig = st.session_state.current_scenario
@@ -81,7 +87,9 @@ current: ScenarioConfig = st.session_state.current_scenario
 # =============================================================================
 if nav == "🛠️ Scenario Builder":
     st.header("🛠️ Scenario Builder")
-    st.markdown("Build, tweak, preview, save, and run complex financial simulations — no code required.")
+    st.markdown(
+        "Build, tweak, preview, save, and run complex financial simulations — no code required."
+    )
 
     badges = []
     if current.external_drivers:
@@ -106,7 +114,9 @@ if nav == "🛠️ Scenario Builder":
     col1, col2 = st.columns(2)
     with col1:
         current.name = st.text_input("Scenario Name", value=current.name)
-        current.description = st.text_area("Description", value=current.description or "", height=80)
+        current.description = st.text_area(
+            "Description", value=current.description or "", height=80
+        )
     with col2:
         current.start = st.date_input("Start Date", value=current.start)
         current.end = st.date_input("End Date", value=current.end)
@@ -120,20 +130,26 @@ if nav == "🛠️ Scenario Builder":
     init_state = current.initial_state or {}
     new_init = {}
     for k, v in list(init_state.items()):
-        new_init[k] = st.number_input(f"Initial {k}", value=float(v) if isinstance(v, (int, float)) else 0.0, key=f"init_{k}")
+        new_init[k] = st.number_input(
+            f"Initial {k}", value=float(v) if isinstance(v, (int, float)) else 0.0, key=f"init_{k}"
+        )
     # Allow adding new keys
     new_key = st.text_input("Add new state variable name", key="new_init_key")
     if new_key:
-        new_init[new_key] = st.number_input(f"Initial value for {new_key}", value=0.0, key="new_init_val")
+        new_init[new_key] = st.number_input(
+            f"Initial value for {new_key}", value=0.0, key="new_init_val"
+        )
     current.initial_state = new_init
 
     # Event Builders (very basic list for Phase 4 MVP)
     st.subheader("Event Sources")
-    st.caption("Full event editor coming in later refinement. For now you can load rich templates or add simple fixed monthly items.")
+    st.caption(
+        "Full event editor coming in later refinement. For now you can load rich templates or add simple fixed monthly items."
+    )
 
     # Show existing
     for i, eb in enumerate(current.event_builders):
-        st.write(f"**{eb.name or f'Event {i+1}'}** — {eb.metadata}")
+        st.write(f"**{eb.name or f'Event {i + 1}'}** — {eb.metadata}")
 
     # Simple "add monthly fixed" helper
     with st.expander("➕ Add simple monthly fixed event"):
@@ -189,9 +205,15 @@ elif nav == "📊 Run & Analyze":
     if HAS_LEGACY:
         with st.sidebar:
             st.header("Quick Legacy Scenarios")
-            legacy = st.selectbox("Legacy", ["None", "Retirement Planning", "Small Business Cash Flow"])
+            legacy = st.selectbox(
+                "Legacy", ["None", "Retirement Planning", "Small Business Cash Flow"]
+            )
             if st.button("Run Legacy"):
-                factory = create_retirement_engine if legacy == "Retirement Planning" else create_business_engine
+                factory = (
+                    create_retirement_engine
+                    if legacy == "Retirement Planning"
+                    else create_business_engine
+                )
                 with st.spinner("Running legacy..."):
                     results = MonteCarloRunner(n_jobs=4).run(200, factory, base_seed=42)
                 st.session_state.results = results
@@ -199,7 +221,9 @@ elif nav == "📊 Run & Analyze":
 
     results = st.session_state.results
     if not results:
-        st.info("Run a simulation from the **Scenario Builder** tab or the legacy quick selector in the sidebar.")
+        st.info(
+            "Run a simulation from the **Scenario Builder** tab or the legacy quick selector in the sidebar."
+        )
         st.stop()
 
     st.subheader(f"Results — {st.session_state.get('scenario_name', 'Custom Scenario')}")
@@ -234,12 +258,16 @@ elif nav == "📊 Run & Analyze":
             cols = st.columns(len(keys) or 1)
             for i, k in enumerate(keys):
                 vals = [m.get(k, 0) for m in all_cm]
-                cols[i].metric(k, f"{sum(vals)/len(vals):,.2f}", f"avg across {len(results)} sims")
+                cols[i].metric(
+                    k, f"{sum(vals) / len(vals):,.2f}", f"avg across {len(results)} sims"
+                )
 
     # Driver info
     if current and current.external_drivers:
-        st.info(f"This scenario uses {len(current.external_drivers)} external driver(s): " +
-                ", ".join(d.name for d in current.external_drivers))
+        st.info(
+            f"This scenario uses {len(current.external_drivers)} external driver(s): "
+            + ", ".join(d.name for d in current.external_drivers)
+        )
 
 # =============================================================================
 # MODE: DISTRIBUTION LIBRARY
@@ -271,7 +299,9 @@ elif nav == "🎲 Distribution Library":
 # =============================================================================
 else:
     st.header("📁 My Scenarios")
-    st.info("Full file-based save/load UI coming in the next iteration. For now, use the Scenario Builder + Export/Import JSON, or the committed templates.")
+    st.info(
+        "Full file-based save/load UI coming in the next iteration. For now, use the Scenario Builder + Export/Import JSON, or the committed templates."
+    )
     st.json(current.to_dict(), expanded=False)
 
     if st.button("Download current scenario as JSON"):
@@ -285,7 +315,9 @@ else:
 # =============================================================================
 # Footer
 # =============================================================================
-st.caption("Financial Simulator • Scenario Builder foundation (Phases 1-4 complete) • Streamlit + Plotly + Pydantic")
+st.caption(
+    "Financial Simulator • Scenario Builder foundation (Phases 1-4 complete) • Streamlit + Plotly + Pydantic"
+)
 
 # -----------------------------
 # Main Logic
@@ -294,15 +326,19 @@ if "results" not in st.session_state:
     st.session_state.results = None
     st.session_state.scenario_name = None
 
-if run_button:
-    factory = create_retirement_engine if scenario_name == "Retirement Planning" else create_business_engine
+if run_button:  # noqa: F821
+    factory = (
+        create_retirement_engine
+        if scenario_name == "Retirement Planning"  # noqa: F821
+        else create_business_engine
+    )
 
     with st.spinner(f"Running {n_sims} simulations... this may take a moment"):
         runner = MonteCarloRunner(n_jobs=4)
-        results = runner.run(n_sims, factory, base_seed=base_seed)
+        results = runner.run(n_sims, factory, base_seed=base_seed)  # noqa: F821
 
     st.session_state.results = results
-    st.session_state.scenario_name = scenario_name
+    st.session_state.scenario_name = scenario_name  # noqa: F821
     st.success(f"Completed {len(results)} simulations!")
 
 # -----------------------------
@@ -315,12 +351,9 @@ if results is None:
     st.stop()
 
 # Tabs
-tab_overview, tab_timeseries, tab_risk, tab_details = st.tabs([
-    "📊 Overview",
-    "📈 Time Series",
-    "📉 Risk Metrics",
-    "🔍 Selected Simulation"
-])
+tab_overview, tab_timeseries, tab_risk, tab_details = st.tabs(
+    ["📊 Overview", "📈 Time Series", "📉 Risk Metrics", "🔍 Selected Simulation"]
+)
 
 # =====================
 # TAB 1: Overview
@@ -344,7 +377,9 @@ with tab_overview:
     # Distribution
     fig = go.Figure()
     fig.add_trace(go.Histogram(x=final_values, nbinsx=30, name="Final Value Distribution"))
-    fig.update_layout(title="Distribution of Final Outcomes", xaxis_title="Final Value ($)", yaxis_title="Count")
+    fig.update_layout(
+        title="Distribution of Final Outcomes", xaxis_title="Final Value ($)", yaxis_title="Count"
+    )
     st.plotly_chart(fig, use_container_width=True)
 
 # =====================
@@ -359,7 +394,10 @@ with tab_timeseries:
         if not res.state_history:
             continue
         times = list(res.state_history.keys())
-        values = [res.state_history[t].get(y_axis, res.state_history[t].get("cash", 0)) for t in times]
+        values = [
+            res.state_history[t].get(y_axis, res.state_history[t].get("cash", 0))  # noqa: F821
+            for t in times
+        ]
         df = pd.DataFrame({"time": times, "value": values, "sim_id": i})
         all_dfs.append(df)
 
@@ -373,7 +411,7 @@ with tab_timeseries:
             "Highlight specific simulations (by index)",
             options=list(range(len(results))),
             default=[],
-            help="Selected simulations will be drawn thicker and more opaque"
+            help="Selected simulations will be drawn thicker and more opaque",
         )
 
         # Create Plotly figure
@@ -383,22 +421,24 @@ with tab_timeseries:
             sim_df = combined[combined["sim_id"] == sim_id]
             is_highlighted = sim_id in highlight_sims
 
-            fig.add_trace(go.Scatter(
-                x=sim_df["time"],
-                y=sim_df["value"],
-                mode="lines",
-                name=f"Sim {sim_id}",
-                line=dict(width=2.5 if is_highlighted else 0.8),
-                opacity=0.85 if is_highlighted else 0.25,
-                showlegend=is_highlighted
-            ))
+            fig.add_trace(
+                go.Scatter(
+                    x=sim_df["time"],
+                    y=sim_df["value"],
+                    mode="lines",
+                    name=f"Sim {sim_id}",
+                    line=dict(width=2.5 if is_highlighted else 0.8),
+                    opacity=0.85 if is_highlighted else 0.25,
+                    showlegend=is_highlighted,
+                )
+            )
 
         fig.update_layout(
-            title=f"Time Series: {y_axis} across all simulations",
+            title=f"Time Series: {y_axis} across all simulations",  # noqa: F821
             xaxis_title="Date",
-            yaxis_title=y_axis,
+            yaxis_title=y_axis,  # noqa: F821
             hovermode="x unified",
-            height=550
+            height=550,
         )
         st.plotly_chart(fig, use_container_width=True, key="timeseries")
 
@@ -424,7 +464,7 @@ with tab_details:
     selected_id = st.selectbox(
         "Select simulation to inspect",
         options=list(range(len(results))),
-        format_func=lambda x: f"Simulation #{x}"
+        format_func=lambda x: f"Simulation #{x}",
     )
 
     selected_result: SimulationResult = results[selected_id]
@@ -442,14 +482,16 @@ with tab_details:
     with col2:
         st.markdown("**Events in this simulation**")
         if selected_result.events:
-            events_df = pd.DataFrame([
-                {
-                    "Time": e.time.strftime("%Y-%m-%d"),
-                    "Value": round(e.value, 2),
-                    "Metadata": e.metadata
-                }
-                for e in selected_result.events
-            ])
+            events_df = pd.DataFrame(
+                [
+                    {
+                        "Time": e.time.strftime("%Y-%m-%d"),
+                        "Value": round(e.value, 2),
+                        "Metadata": e.metadata,
+                    }
+                    for e in selected_result.events
+                ]
+            )
             st.dataframe(events_df, use_container_width=True, height=400)
         else:
             st.info("No events recorded for this simulation.")

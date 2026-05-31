@@ -8,28 +8,20 @@ It reuses the existing core factories wherever possible.
 
 from __future__ import annotations
 
-from datetime import datetime
-from typing import Any, Callable, Dict, List, Optional
-
-import numpy as np
-
 from ..core import (
-    SimulationEngine,
     ComposedEventBuilder,
     RateChangeValue,
-    FixedValue,  # for constant driver
-    IntervalTiming,
+    SimulationEngine,
+    SimulationResult,
 )
-from ..core.distributions import create_distribution
-from ..core.event import create_timing, create_value_generator
 from ..monte_carlo.runner import MonteCarloRunner
-from .models import ScenarioConfig, CustomMetric, DiscreteRateDriver, ConstantDriver
 from .metrics import compute_all_metrics
+from .models import ConstantDriver, DiscreteRateDriver, ScenarioConfig
 
 
 def build_engine(
     cfg: ScenarioConfig,
-    seed: Optional[int] = None,
+    seed: int | None = None,
 ) -> SimulationEngine:
     """Create a fully configured SimulationEngine from a ScenarioConfig.
 
@@ -70,7 +62,10 @@ def build_engine(
             # Also ensure it is present at t=start even if user overrode
             eng.initial_state.setdefault(driver.target_state_key, driver.value)
 
-        elif hasattr(driver, "type") and driver.type in ("gbm_continuous", "mean_revert_continuous"):
+        elif hasattr(driver, "type") and driver.type in (
+            "gbm_continuous",
+            "mean_revert_continuous",
+        ):
             # Stubs for Phase 5+ — create the appropriate ContinuousProcess
             # For now we log a warning by not crashing and do nothing (UI will gate them)
             pass
@@ -80,7 +75,7 @@ def build_engine(
 
 def run_single(
     cfg: ScenarioConfig,
-    seed: Optional[int] = None,
+    seed: int | None = None,
 ) -> SimulationResult:
     """Materialize and run one simulation. Returns the result with custom metrics attached."""
     eng = build_engine(cfg, seed=seed)
@@ -99,10 +94,11 @@ def run_single(
 def run_monte_carlo(
     cfg: ScenarioConfig,
     n_sims: int,
-    base_seed: Optional[int] = None,
+    base_seed: int | None = None,
     n_jobs: int = 4,
-) -> List[SimulationResult]:
+) -> list[SimulationResult]:
     """Run many simulations and attach custom metrics to every result."""
+
     def factory(i: int) -> SimulationEngine:
         seed = (base_seed + i) if base_seed is not None else None
         return build_engine(cfg, seed=seed)

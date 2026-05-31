@@ -2,19 +2,19 @@
 
 import numpy as np
 
-from financial_simulator.core.distributions import (
-    NormalDistribution,
-    UniformDistribution,
-    TriangularDistribution,
-    LogNormalDistribution,
-    ExponentialDistribution,
-    BetaDistribution,
-    ConstantDistribution,
-)
 from app.components.distribution_viz import (
     get_analytical_pdf,
-    plot_distribution_preview,
     get_distribution_stats,
+    plot_distribution_preview,
+)
+from financial_simulator.core.distributions import (
+    BetaDistribution,
+    ConstantDistribution,
+    ExponentialDistribution,
+    LogNormalDistribution,
+    NormalDistribution,
+    TriangularDistribution,
+    UniformDistribution,
 )
 
 

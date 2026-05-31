@@ -8,8 +8,6 @@ layer and the UI results display.
 
 from __future__ import annotations
 
-from typing import Dict, List
-
 import numpy as np
 
 from ..core.simulation import SimulationResult
@@ -72,11 +70,9 @@ def compute_metric(metric: CustomMetric, result: SimulationResult) -> float:
     return float("nan")
 
 
-def compute_all_metrics(
-    metrics: List[CustomMetric], result: SimulationResult
-) -> Dict[str, float]:
+def compute_all_metrics(metrics: list[CustomMetric], result: SimulationResult) -> dict[str, float]:
     """Compute all custom metrics for one simulation result."""
-    out: Dict[str, float] = {}
+    out: dict[str, float] = {}
     for m in metrics:
         try:
             out[m.name] = compute_metric(m, result)

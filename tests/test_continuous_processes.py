@@ -1,14 +1,13 @@
 """Tests for ContinuousProcess reproducibility (the RNG wiring fix)."""
 
-import numpy as np
 from datetime import datetime, timedelta
 
 from financial_simulator.core import (
-    SimulationEngine,
     GBMContinuousProcess,
-    MeanRevertingContinuousProcess,
     GeometricBrownianMotion,
+    MeanRevertingContinuousProcess,
     MeanRevertingProcess,
+    SimulationEngine,
 )
 from financial_simulator.core.simulation import AppreciationProcess
 
@@ -87,7 +86,7 @@ def test_appreciation_unaffected_by_rng_wiring():
     NOTE: Continuous processes only advance when there are discrete events driving the simulation clock.
     We add a dummy monthly event so the full year elapses.
     """
-    from financial_simulator.core.event import ComposedEventBuilder, IntervalTiming, FixedValue
+    from financial_simulator.core.event import ComposedEventBuilder, FixedValue, IntervalTiming
 
     start = datetime(2026, 1, 1)
     end = datetime(2027, 1, 1)
@@ -111,6 +110,6 @@ def test_appreciation_unaffected_by_rng_wiring():
     result = eng.get_result()
 
     # Pure geometric growth formula check (engine ran ~1 year with monthly ticks)
-    expected = 400_000.0 * (1.03 ** 1.0)
+    expected = 400_000.0 * (1.03**1.0)
     # Monthly stepping means the final delta is not exactly 1.0 year; allow small relative error
     assert abs(result.final_state["house"] - expected) < 200.0
