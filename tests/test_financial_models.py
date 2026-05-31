@@ -1,11 +1,9 @@
 """Tests for clean financial domain models (Loan, TaxSchedule, Portfolio)."""
 
-import pytest
-
-from financial_simulator.core.financial_models import Loan, TaxBracket, TaxSchedule, Portfolio
-
+from financial_simulator.core.financial_models import Loan, Portfolio, TaxBracket, TaxSchedule
 
 # --- Loan ---
+
 
 def test_loan_standard_amortization():
     loan = Loan(name="Mortgage", principal=300000, annual_rate=0.065, term_months=360)
@@ -20,6 +18,7 @@ def test_loan_zero_rate_divides_principal():
 
 # --- TaxSchedule ---
 
+
 def test_tax_schedule_effective_rate_progressive():
     brackets = [
         TaxBracket(lower=0, upper=10000, rate=0.10),
@@ -33,11 +32,14 @@ def test_tax_schedule_effective_rate_progressive():
 
 
 def test_tax_schedule_below_deduction_zero():
-    ts = TaxSchedule(name="T", brackets=[TaxBracket(lower=0, upper=None, rate=0.25)], standard_deduction=5000)
+    ts = TaxSchedule(
+        name="T", brackets=[TaxBracket(lower=0, upper=None, rate=0.25)], standard_deduction=5000
+    )
     assert ts.effective_rate(3000) == 0.0
 
 
 # --- Portfolio ---
+
 
 def test_portfolio_normalize():
     p = Portfolio(name="Mixed", assets={"a": 60, "b": 30, "c": 10})

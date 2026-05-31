@@ -3,12 +3,13 @@ Business Cash Flow Monte Carlo Example
 """
 
 from datetime import datetime, timedelta
+
 from financial_simulator.core import (
-    SimulationEngine,
     ComposedEventBuilder,
-    IntervalTiming,
-    FixedValue,
     DistributionValue,
+    FixedValue,
+    IntervalTiming,
+    SimulationEngine,
     TriangularDistribution,
 )
 

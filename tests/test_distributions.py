@@ -1,24 +1,25 @@
 """Tests for core distributions (all 7 types + factory + validation + reproducibility)."""
 
-import pytest
 import numpy as np
-from hypothesis import given, strategies as st, settings
+import pytest
+from hypothesis import given, settings
+from hypothesis import strategies as st
 from hypothesis.strategies import floats
+from pydantic import ValidationError
 
 from financial_simulator.core.distributions import (
-    NormalDistribution,
-    UniformDistribution,
-    TriangularDistribution,
-    LogNormalDistribution,
-    ExponentialDistribution,
-    ConstantDistribution,
     BetaDistribution,
+    ConstantDistribution,
+    ExponentialDistribution,
+    LogNormalDistribution,
+    NormalDistribution,
+    TriangularDistribution,
+    UniformDistribution,
     create_distribution,
-    AnyDistribution,
 )
 
-
 # --- Basic sampling and statistical sanity ---
+
 
 def test_normal_distribution():
     dist = NormalDistribution(mean=100, std=10)
@@ -86,35 +87,40 @@ def test_beta_distribution():
 
 # --- Validation errors ---
 
+
 @pytest.mark.parametrize("low,high", [(5, 1), (0, -1), (10, 10 - 1e-12)])
 def test_uniform_validation_rejects_low_gt_high(low, high):
-    with pytest.raises(Exception):  # Pydantic ValidationError
+    with pytest.raises(ValidationError):
         UniformDistribution(low=low, high=high)
 
 
-@pytest.mark.parametrize("low,mode,high", [
-    (5, 3, 10),
-    (0, 10, 5),
-    (1, 1, 0),
-])
+@pytest.mark.parametrize(
+    "low,mode,high",
+    [
+        (5, 3, 10),
+        (0, 10, 5),
+        (1, 1, 0),
+    ],
+)
 def test_triangular_validation_rejects_invalid(low, mode, high):
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError):
         TriangularDistribution(low=low, mode=mode, high=high)
 
 
 @pytest.mark.parametrize("rate", [0, -0.1, -1])
 def test_exponential_validation_rejects_non_positive_rate(rate):
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError):
         ExponentialDistribution(rate=rate)
 
 
 @pytest.mark.parametrize("alpha,beta", [(0, 1), (1, 0), (-0.5, 2), (2, -1)])
 def test_beta_validation_rejects_non_positive_params(alpha, beta):
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError):
         BetaDistribution(alpha=alpha, beta=beta)
 
 
 # --- create_distribution factory ---
+
 
 def test_create_distribution_from_dict_triangular():
     data = {"type": "triangular", "low": 1, "mode": 2, "high": 3}
@@ -140,21 +146,25 @@ def test_create_distribution_rejects_bad_type():
 
 
 def test_create_distribution_rejects_unknown_type():
-    with pytest.raises(Exception):
+    with pytest.raises(ValidationError):
         create_distribution({"type": "weird", "foo": 1})
 
 
 # --- Reproducibility across all distribution types ---
 
-@pytest.mark.parametrize("dist_cls,kwargs", [
-    (NormalDistribution, {"mean": 0, "std": 1}),
-    (UniformDistribution, {"low": -10, "high": 10}),
-    (TriangularDistribution, {"low": 0, "mode": 5, "high": 10}),
-    (LogNormalDistribution, {"mean": 1.2, "sigma": 0.3}),
-    (ExponentialDistribution, {"rate": 0.5}),
-    (ConstantDistribution, {"value": -999.0}),
-    (BetaDistribution, {"alpha": 1.5, "beta": 3.2}),
-])
+
+@pytest.mark.parametrize(
+    "dist_cls,kwargs",
+    [
+        (NormalDistribution, {"mean": 0, "std": 1}),
+        (UniformDistribution, {"low": -10, "high": 10}),
+        (TriangularDistribution, {"low": 0, "mode": 5, "high": 10}),
+        (LogNormalDistribution, {"mean": 1.2, "sigma": 0.3}),
+        (ExponentialDistribution, {"rate": 0.5}),
+        (ConstantDistribution, {"value": -999.0}),
+        (BetaDistribution, {"alpha": 1.5, "beta": 3.2}),
+    ],
+)
 def test_all_distributions_are_reproducible(dist_cls, kwargs):
     dist = dist_cls(**kwargs)
     rng1 = np.random.default_rng(777)
@@ -165,6 +175,7 @@ def test_all_distributions_are_reproducible(dist_cls, kwargs):
 
 
 # --- Hypothesis property-based tests ---
+
 
 @settings(max_examples=200)
 @given(

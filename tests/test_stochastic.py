@@ -6,15 +6,14 @@ Includes edge cases for delta <= 0 and reproducibility.
 import datetime as dt
 
 import numpy as np
-import pytest
 
 from financial_simulator.core.stochastic import (
     GeometricBrownianMotion,
     MeanRevertingProcess,
 )
 
-
 # --- GBM ---
+
 
 def test_gbm_positive_drift_increases_on_average():
     gbm = GeometricBrownianMotion(drift=0.20, volatility=0.10)
@@ -43,6 +42,7 @@ def test_gbm_zero_or_negative_delta_returns_current():
 
 
 # --- Mean Reverting ---
+
 
 def test_mean_reverting_moves_toward_long_term_mean():
     mr = MeanRevertingProcess(long_term_mean=0.04, speed=3.0, volatility=0.005)

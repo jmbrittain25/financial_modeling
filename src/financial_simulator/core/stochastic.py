@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import datetime as dt
 from abc import ABC, abstractmethod
-from typing import Any, Optional
 
 import numpy as np
 from pydantic import BaseModel, ConfigDict, Field
@@ -19,14 +18,14 @@ class StochasticProcess(BaseModel, ABC):
 
     model_config = ConfigDict(extra="forbid", frozen=False)
 
-    name: Optional[str] = None
+    name: str | None = None
 
     @abstractmethod
     def step(
         self,
         current_value: float,
         delta: dt.timedelta,
-        rng: Optional[np.random.Generator] = None,
+        rng: np.random.Generator | None = None,
     ) -> float:
         """Advance the process by one time step and return the new value."""
         ...
@@ -49,7 +48,7 @@ class GeometricBrownianMotion(StochasticProcess):
         self,
         current_value: float,
         delta: dt.timedelta,
-        rng: Optional[np.random.Generator] = None,
+        rng: np.random.Generator | None = None,
     ) -> float:
         rng = rng or np.random.default_rng()
         years = delta.total_seconds() / (365.25 * 24 * 3600)
@@ -79,7 +78,7 @@ class MeanRevertingProcess(StochasticProcess):
         self,
         current_value: float,
         delta: dt.timedelta,
-        rng: Optional[np.random.Generator] = None,
+        rng: np.random.Generator | None = None,
     ) -> float:
         rng = rng or np.random.default_rng()
         years = delta.total_seconds() / (365.25 * 24 * 3600)

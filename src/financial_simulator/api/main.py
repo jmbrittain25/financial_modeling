@@ -4,12 +4,13 @@ FastAPI backend for the financial-simulator platform.
 Designed to be clean, well-documented, and friendly to future AI agents.
 """
 
+import uuid
+from typing import Any
+
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from typing import Any, Dict, List, Optional
-import uuid
 
-from ..core import SimulationEngine, create_event_builder, SimulationResult
+from ..core import SimulationEngine, SimulationResult, create_event_builder
 from ..core.simulation import AppreciationProcess
 
 app = FastAPI(
@@ -20,13 +21,13 @@ app = FastAPI(
 
 
 class RunSimulationRequest(BaseModel):
-    config: Dict[str, Any]
-    seed: Optional[int] = None
+    config: dict[str, Any]
+    seed: int | None = None
 
 
 class RunSimulationResponse(BaseModel):
     job_id: str
-    result: Optional[Dict[str, Any]] = None
+    result: dict[str, Any] | None = None
     status: str = "completed"
 
 
@@ -64,7 +65,7 @@ async def run_simulation(req: RunSimulationRequest):
             status="completed",
         )
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise HTTPException(status_code=400, detail=str(e)) from e
 
 
 @app.get("/health")

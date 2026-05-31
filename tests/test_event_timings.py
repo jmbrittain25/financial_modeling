@@ -10,15 +10,15 @@ import numpy as np
 import pytest
 
 from financial_simulator.core.event import (
-    OneTimeTiming,
     IntervalTiming,
+    OneTimeTiming,
     RandomTiming,
     SeasonalTiming,
     create_timing,
 )
 
-
 # --- OneTimeTiming ---
+
 
 def test_onetime_fires_exactly_once_inside_window():
     t = OneTimeTiming(time=dt.datetime(2026, 6, 15))
@@ -51,14 +51,19 @@ def test_onetime_after_end_returns_none():
 def test_onetime_exactly_at_start_and_end():
     t0 = OneTimeTiming(time=dt.datetime(2026, 1, 1))
     t0.reset()
-    assert t0.next_time(dt.datetime(2026, 1, 1), dt.datetime(2026, 12, 31), {}) == dt.datetime(2026, 1, 1)
+    assert t0.next_time(dt.datetime(2026, 1, 1), dt.datetime(2026, 12, 31), {}) == dt.datetime(
+        2026, 1, 1
+    )
 
     t1 = OneTimeTiming(time=dt.datetime(2026, 12, 31))
     t1.reset()
-    assert t1.next_time(dt.datetime(2026, 1, 1), dt.datetime(2026, 12, 31), {}) == dt.datetime(2026, 12, 31)
+    assert t1.next_time(dt.datetime(2026, 1, 1), dt.datetime(2026, 12, 31), {}) == dt.datetime(
+        2026, 12, 31
+    )
 
 
 # --- IntervalTiming ---
+
 
 def test_interval_with_start_time_generates_correct_sequence():
     t = IntervalTiming(interval=dt.timedelta(days=30), start_time=dt.datetime(2026, 2, 1))
@@ -116,6 +121,7 @@ def test_interval_exhausted_returns_none():
 
 # --- RandomTiming ---
 
+
 def test_random_timing_reproducible_given_rng():
     rng1 = np.random.default_rng(123)
     rng2 = np.random.default_rng(123)
@@ -145,7 +151,9 @@ def test_random_timing_reproducible_given_rng():
 def test_random_timing_unsupported_distribution_rejected_at_construction():
     # The Literal["uniform"] is validated by Pydantic at model construction time
     with pytest.raises(Exception, match="uniform"):
-        RandomTiming(start=dt.datetime(2026, 1, 1), end=dt.datetime(2026, 12, 31), n=3, distribution="weird")
+        RandomTiming(
+            start=dt.datetime(2026, 1, 1), end=dt.datetime(2026, 12, 31), n=3, distribution="weird"
+        )
 
 
 def test_random_timing_n_equals_one():
@@ -159,6 +167,7 @@ def test_random_timing_n_equals_one():
 
 
 # --- SeasonalTiming ---
+
 
 def test_seasonal_filters_to_allowed_months():
     inner = IntervalTiming(interval=dt.timedelta(days=15), start_time=dt.datetime(2026, 1, 1))
@@ -211,8 +220,13 @@ def test_seasonal_wraps_another_seasonal():
 
 # --- create_timing factory (legacy + modern shapes) ---
 
+
 def test_create_timing_modern_interval():
-    data = {"type": "Interval", "interval": dt.timedelta(days=30), "start_time": dt.datetime(2026, 1, 1)}
+    data = {
+        "type": "Interval",
+        "interval": dt.timedelta(days=30),
+        "start_time": dt.datetime(2026, 1, 1),
+    }
     timing = create_timing(data)
     assert isinstance(timing, IntervalTiming)
 

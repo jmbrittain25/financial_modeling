@@ -4,28 +4,23 @@ MonteCarloRunner tests live in test_monte_carlo.py.
 """
 
 import datetime as dt
-from typing import Any, Dict
-
-import numpy as np
-import pytest
 
 from financial_simulator.core import (
-    SimulationEngine,
-    ComposedEventBuilder,
     AppreciationProcess,
+    ComposedEventBuilder,
+    SimulationEngine,
     SimulationResult,
 )
+from financial_simulator.core.distributions import NormalDistribution
 from financial_simulator.core.event import (
+    FixedValue,
     IntervalTiming,
     OneTimeTiming,
-    FixedValue,
     RateChangeValue,
-    VariableRateLoanValue,
 )
-from financial_simulator.core.distributions import NormalDistribution
-
 
 # --- Basic functionality ---
+
 
 def test_basic_engine_run(simple_engine: SimulationEngine):
     simple_engine.run()
@@ -64,7 +59,10 @@ def test_engine_reproducibility():
 
 # --- Edge cases ---
 
-def test_engine_with_no_builders_produces_single_state_snapshot(start_2026: dt.datetime, end_2026_mid: dt.datetime):
+
+def test_engine_with_no_builders_produces_single_state_snapshot(
+    start_2026: dt.datetime, end_2026_mid: dt.datetime
+):
     eng = SimulationEngine(
         name="empty",
         start=start_2026,
@@ -107,7 +105,9 @@ def test_engine_events_entirely_before_window_still_generate_when_catchup_logic_
     )
     eng.add_event_builder(
         ComposedEventBuilder(
-            timing=IntervalTiming(interval=dt.timedelta(days=30), start_time=dt.datetime(2020, 1, 1)),
+            timing=IntervalTiming(
+                interval=dt.timedelta(days=30), start_time=dt.datetime(2020, 1, 1)
+            ),
             value_gen=FixedValue(value=100),
         )
     )
@@ -131,6 +131,7 @@ def test_get_result_before_run_returns_partial_state():
 
 
 # --- State updates from ValueGenerators ---
+
 
 def test_rate_change_value_updates_state_deterministically():
     eng = SimulationEngine(
@@ -165,23 +166,30 @@ def test_cumulative_cash_auto_tracking_with_mixed_events():
     )
     eng.add_event_builder(
         ComposedEventBuilder(
-            timing=IntervalTiming(interval=dt.timedelta(days=30), start_time=dt.datetime(2026, 1, 1)),
+            timing=IntervalTiming(
+                interval=dt.timedelta(days=30), start_time=dt.datetime(2026, 1, 1)
+            ),
             value_gen=FixedValue(value=1000),
         )
     )
     eng.add_event_builder(
         ComposedEventBuilder(
-            timing=IntervalTiming(interval=dt.timedelta(days=30), start_time=dt.datetime(2026, 1, 15)),
+            timing=IntervalTiming(
+                interval=dt.timedelta(days=30), start_time=dt.datetime(2026, 1, 15)
+            ),
             value_gen=FixedValue(value=-300),
         )
     )
     eng.run()
     result = eng.get_result()
     # Final cumulative should be net of all events
-    assert result.final_state["cumulative_cash"] == 1400.0  # 2*1000 - 2*300 (approx, depending on exact dates)
+    assert (
+        result.final_state["cumulative_cash"] == 1400.0
+    )  # 2*1000 - 2*300 (approx, depending on exact dates)
 
 
 # --- Continuous processes ---
+
 
 def test_appreciation_process_compounds_between_events(engine_with_continuous: SimulationEngine):
     engine_with_continuous.run()
@@ -205,6 +213,7 @@ def test_appreciation_process_no_op_when_var_missing():
 
 
 # --- Result object ---
+
 
 def test_simulation_result_is_frozen_and_serializable(simple_engine: SimulationEngine):
     simple_engine.run()

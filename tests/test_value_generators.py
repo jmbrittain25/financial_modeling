@@ -1,23 +1,23 @@
 """Tests for all ValueGenerators (8 types) including state updates and side effects."""
 
 import datetime as dt
-import numpy as np
-import pytest
 
+import numpy as np
+
+from financial_simulator.core.distributions import ConstantDistribution, NormalDistribution
 from financial_simulator.core.event import (
+    DistributionValue,
+    DividendValue,
     FixedValue,
     GrowingValue,
-    DistributionValue,
-    RateChangeValue,
-    VariableRateLoanValue,
-    DividendValue,
     InvestmentContributionValue,
+    RateChangeValue,
     TaxEventValue,
+    VariableRateLoanValue,
 )
-from financial_simulator.core.distributions import NormalDistribution, ConstantDistribution
-
 
 # --- FixedValue ---
+
 
 def test_fixed_value_pos_and_neg():
     gen = FixedValue(1234.5)
@@ -30,6 +30,7 @@ def test_fixed_value_pos_and_neg():
 
 
 # --- GrowingValue ---
+
 
 def test_growing_value_compounds_over_time():
     gen = GrowingValue(initial=1000.0, growth_rate=0.12)
@@ -52,6 +53,7 @@ def test_growing_value_zero_delta_no_change():
 
 
 # --- DistributionValue ---
+
 
 def test_distribution_value_reproducible():
     dist = NormalDistribution(mean=100, std=5)
@@ -76,6 +78,7 @@ def test_distribution_value_uses_passed_rng():
 
 # --- RateChangeValue (state_update) ---
 
+
 def test_rate_change_value_emits_zero_cash_and_state_update():
     dist = NormalDistribution(mean=0.05, std=0.001)
     gen = RateChangeValue(dist=dist, update_key="interest_rate")
@@ -89,6 +92,7 @@ def test_rate_change_value_emits_zero_cash_and_state_update():
 
 
 # --- VariableRateLoanValue ---
+
 
 def test_variable_rate_loan_basic_payment_and_metadata():
     gen = VariableRateLoanValue(
@@ -104,9 +108,7 @@ def test_variable_rate_loan_basic_payment_and_metadata():
 
 
 def test_variable_rate_loan_respects_state_rate_changes():
-    gen = VariableRateLoanValue(
-        principal=100000, initial_rate=0.05, term_months=120, rate_key="r"
-    )
+    gen = VariableRateLoanValue(principal=100000, initial_rate=0.05, term_months=120, rate_key="r")
     state = {"r": 0.05}
     gen.get_value(dt.datetime(2026, 1, 1), state)  # month 1
     state["r"] = 0.08  # rate spike
@@ -115,9 +117,7 @@ def test_variable_rate_loan_respects_state_rate_changes():
 
 
 def test_variable_rate_loan_zero_rate_path():
-    gen = VariableRateLoanValue(
-        principal=12000, initial_rate=0.0, term_months=12, rate_key="r"
-    )
+    gen = VariableRateLoanValue(principal=12000, initial_rate=0.0, term_months=12, rate_key="r")
     state = {"r": 0.0}
     val, meta = gen.get_value(dt.datetime(2026, 1, 1), state)
     assert val < 0
@@ -125,9 +125,7 @@ def test_variable_rate_loan_zero_rate_path():
 
 
 def test_variable_rate_loan_exhausts_after_term():
-    gen = VariableRateLoanValue(
-        principal=1000, initial_rate=0.0, term_months=2, rate_key="r"
-    )
+    gen = VariableRateLoanValue(principal=1000, initial_rate=0.0, term_months=2, rate_key="r")
     state = {"r": 0.0}
     gen.get_value(dt.datetime(2026, 1, 1), state)
     gen.get_value(dt.datetime(2026, 2, 1), state)
@@ -136,6 +134,7 @@ def test_variable_rate_loan_exhausts_after_term():
 
 
 # --- DividendValue ---
+
 
 def test_dividend_value_uses_portfolio_key():
     gen = DividendValue(annual_yield=0.04, investment_value_key="portfolio")
@@ -153,6 +152,7 @@ def test_dividend_value_missing_key_defaults_to_zero():
 
 # --- InvestmentContributionValue ---
 
+
 def test_investment_contribution_simple():
     gen = InvestmentContributionValue(amount=1500.0)
     val, meta = gen.get_value(dt.datetime(2026, 1, 1), {})
@@ -168,6 +168,7 @@ def test_investment_contribution_with_growth_key():
 
 
 # --- TaxEventValue (state_update) ---
+
 
 def test_tax_event_value_applies_rate_and_accumulates():
     gen = TaxEventValue(rate=0.22, base_key="taxable_income", tax_key="taxes")

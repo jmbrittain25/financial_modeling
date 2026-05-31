@@ -3,13 +3,13 @@ Retirement Planning Monte Carlo Example
 """
 
 from datetime import datetime, timedelta
+
 from financial_simulator.core import (
-    SimulationEngine,
-    ComposedEventBuilder,
-    IntervalTiming,
-    GrowingValue,
-    FixedValue,
     AppreciationProcess,
+    ComposedEventBuilder,
+    FixedValue,
+    IntervalTiming,
+    SimulationEngine,
 )
 
 
@@ -38,9 +38,7 @@ def create_retirement_engine(seed: int = None) -> SimulationEngine:
     )
 
     # Portfolio growth (continuous)
-    engine.add_continuous_process(
-        AppreciationProcess(rate=0.065, var="portfolio_value")
-    )
+    engine.add_continuous_process(AppreciationProcess(rate=0.065, var="portfolio_value"))
 
     # Safe withdrawal phase (starting at year 20)
     # For simplicity in v1 we model it as a large negative event series

@@ -19,7 +19,7 @@ from __future__ import annotations
 import datetime as dt
 import json
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any
 
 import typer
 import yaml
@@ -41,12 +41,12 @@ class SimulationConfig(BaseModel):
     """
 
     name: str = "cli-simulation"
-    start: Union[str, dt.datetime]
-    end: Union[str, dt.datetime]
+    start: str | dt.datetime
+    end: str | dt.datetime
     initial_state: dict[str, Any] = Field(default_factory=dict)
     builders: list[dict[str, Any]] = Field(default_factory=list)
     continuous_processes: list[dict[str, Any]] = Field(default_factory=list)
-    seed: Optional[int] = None
+    seed: int | None = None
 
     model_config = ConfigDict(extra="allow")
 
@@ -86,7 +86,7 @@ def _create_continuous_process(d: dict[str, Any]) -> AppreciationProcess:
     raise ValueError(f"Unsupported continuous process (only Appreciation in v1): {d}")
 
 
-def build_engine(cfg: dict[str, Any], seed: Optional[int] = None) -> SimulationEngine:
+def build_engine(cfg: dict[str, Any], seed: int | None = None) -> SimulationEngine:
     """Build a SimulationEngine from a simple config dict.
 
     Accepts either a top-level engine shape or the common {"simulation": {...}} wrapper.
@@ -132,19 +132,19 @@ def build_engine(cfg: dict[str, Any], seed: Optional[int] = None) -> SimulationE
 
 @app.command("run")
 def run(
-    config: Path = typer.Option(
+    config: Path = typer.Option(  # noqa: B008
         ...,
         "--config",
         "-c",
         help="Path to JSON or YAML simulation config.",
     ),
-    seed: Optional[int] = typer.Option(
+    seed: int | None = typer.Option(
         None,
         "--seed",
         "-s",
         help="Override random seed for reproducibility.",
     ),
-    output: Optional[Path] = typer.Option(
+    output: Path | None = typer.Option(  # noqa: B008
         None,
         "--output",
         "-o",
@@ -174,11 +174,17 @@ def run(
     try:
         cfg = load_config(config)
     except (json.JSONDecodeError, yaml.YAMLError) as exc:
-        typer.secho(f"Error: Failed to parse config file {config} (invalid JSON/YAML)", fg=typer.colors.RED, err=True)
+        typer.secho(
+            f"Error: Failed to parse config file {config} (invalid JSON/YAML)",
+            fg=typer.colors.RED,
+            err=True,
+        )
         typer.echo(f"  Details: {exc}")
         raise typer.Exit(1) from exc
     except Exception as exc:
-        typer.secho(f"Error: Failed to load config file {config}: {exc}", fg=typer.colors.RED, err=True)
+        typer.secho(
+            f"Error: Failed to load config file {config}: {exc}", fg=typer.colors.RED, err=True
+        )
         raise typer.Exit(1) from exc
 
     # Pydantic validation of config shape (before touching build_engine)
@@ -195,7 +201,11 @@ def run(
     try:
         engine = build_engine(cfg, seed=seed)
     except Exception as exc:
-        typer.secho(f"Error: Failed to build SimulationEngine (after config validation): {exc}", fg=typer.colors.RED, err=True)
+        typer.secho(
+            f"Error: Failed to build SimulationEngine (after config validation): {exc}",
+            fg=typer.colors.RED,
+            err=True,
+        )
         raise typer.Exit(1) from exc
 
     if verbose:

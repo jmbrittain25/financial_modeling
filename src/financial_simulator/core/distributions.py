@@ -8,12 +8,12 @@ instantiation.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, Literal, Optional, Union
+from typing import Any, Literal
 
 try:
     from typing import Annotated  # py >= 3.9
 except ImportError:
-    from typing_extensions import Annotated
+    from typing import Annotated
 
 import numpy as np
 from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, model_validator
@@ -34,7 +34,7 @@ class Distribution(BaseModel, ABC):
     )
 
     @abstractmethod
-    def sample(self, rng: Optional[np.random.Generator] = None) -> float:
+    def sample(self, rng: np.random.Generator | None = None) -> float:
         """Return a single sample.
 
         If an rng (numpy Generator) is supplied, sampling is deterministic
@@ -59,8 +59,7 @@ class NormalDistribution(Distribution):
     mean: float
     std: float = Field(gt=0, description="Standard deviation (> 0)")
 
-
-    def sample(self, rng: Optional[np.random.Generator] = None) -> float:
+    def sample(self, rng: np.random.Generator | None = None) -> float:
         rng = rng or np.random.default_rng()
         return float(rng.normal(self.mean, self.std))
 
@@ -78,7 +77,7 @@ class UniformDistribution(Distribution):
             raise ValueError(f"low ({self.low}) must be <= high ({self.high})")
         return self
 
-    def sample(self, rng: Optional[np.random.Generator] = None) -> float:
+    def sample(self, rng: np.random.Generator | None = None) -> float:
         rng = rng or np.random.default_rng()
         return float(rng.uniform(self.low, self.high))
 
@@ -103,7 +102,7 @@ class TriangularDistribution(Distribution):
             )
         return self
 
-    def sample(self, rng: Optional[np.random.Generator] = None) -> float:
+    def sample(self, rng: np.random.Generator | None = None) -> float:
         rng = rng or np.random.default_rng()
         return float(rng.triangular(self.low, self.mode, self.high))
 
@@ -119,7 +118,7 @@ class LogNormalDistribution(Distribution):
     mean: float = Field(description="Mean of the underlying normal (log-space)")
     sigma: float = Field(gt=0, description="Standard deviation of the underlying normal (shape)")
 
-    def sample(self, rng: Optional[np.random.Generator] = None) -> float:
+    def sample(self, rng: np.random.Generator | None = None) -> float:
         rng = rng or np.random.default_rng()
         return float(rng.lognormal(mean=self.mean, sigma=self.sigma))
 
@@ -134,7 +133,7 @@ class ExponentialDistribution(Distribution):
     type: Literal["exponential"] = "exponential"
     rate: float = Field(gt=0, description="Rate parameter lambda (> 0)")
 
-    def sample(self, rng: Optional[np.random.Generator] = None) -> float:
+    def sample(self, rng: np.random.Generator | None = None) -> float:
         rng = rng or np.random.default_rng()
         # numpy uses scale = 1/rate
         return float(rng.exponential(scale=1.0 / self.rate))
@@ -149,7 +148,7 @@ class ConstantDistribution(Distribution):
     type: Literal["constant"] = "constant"
     value: float
 
-    def sample(self, rng: Optional[np.random.Generator] = None) -> float:
+    def sample(self, rng: np.random.Generator | None = None) -> float:
         return float(self.value)
 
 
@@ -164,7 +163,7 @@ class BetaDistribution(Distribution):
     alpha: float = Field(gt=0)
     beta: float = Field(gt=0)
 
-    def sample(self, rng: Optional[np.random.Generator] = None) -> float:
+    def sample(self, rng: np.random.Generator | None = None) -> float:
         rng = rng or np.random.default_rng()
         return float(rng.beta(self.alpha, self.beta))
 
@@ -174,15 +173,13 @@ class BetaDistribution(Distribution):
 # -----------------------------------------------------------------------------
 
 AnyDistribution = Annotated[
-    Union[
-        NormalDistribution,
-        UniformDistribution,
-        TriangularDistribution,
-        LogNormalDistribution,
-        ExponentialDistribution,
-        ConstantDistribution,
-        BetaDistribution,
-    ],
+    NormalDistribution
+    | UniformDistribution
+    | TriangularDistribution
+    | LogNormalDistribution
+    | ExponentialDistribution
+    | ConstantDistribution
+    | BetaDistribution,
     Field(discriminator="type"),
 ]
 

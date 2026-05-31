@@ -1,11 +1,17 @@
 """Tests for RiskAnalyzer and MonteCarloAnalyzer, including edge cases."""
 
 import datetime as dt
+
 import numpy as np
 import pytest
 
-from financial_simulator.analytics.risk import RiskAnalyzer, MonteCarloAnalyzer, RiskReport
-from financial_simulator.core import SimulationEngine, ComposedEventBuilder, IntervalTiming, FixedValue
+from financial_simulator.analytics.risk import MonteCarloAnalyzer, RiskAnalyzer, RiskReport
+from financial_simulator.core import (
+    ComposedEventBuilder,
+    FixedValue,
+    IntervalTiming,
+    SimulationEngine,
+)
 
 
 def test_var_cvar_simple():
@@ -40,6 +46,7 @@ def test_sortino_ratio_downside_only():
 
 
 # --- Edge cases ---
+
 
 def test_var_cvar_single_element():
     analyzer = RiskAnalyzer()
@@ -91,6 +98,7 @@ def test_probability_of_ruin():
 
 # --- MonteCarloAnalyzer ---
 
+
 def test_monte_carlo_analyzer_basic_flow():
     # Build a tiny set of deterministic results
     def make_eng(i):
@@ -110,6 +118,7 @@ def test_monte_carlo_analyzer_basic_flow():
         return eng
 
     from financial_simulator.monte_carlo.runner import MonteCarloRunner
+
     runner = MonteCarloRunner(n_jobs=2)
     results = runner.run(5, make_eng, base_seed=1)
 

@@ -7,7 +7,7 @@ Designed to work with lists of SimulationResult objects or raw outcome arrays.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import List, Optional, Dict, Any
+from typing import Any
 
 import numpy as np
 from pydantic import BaseModel, ConfigDict, Field
@@ -21,10 +21,10 @@ class RiskMetrics:
 
     var_95: float
     cvar_95: float
-    sharpe_ratio: Optional[float] = None
-    sortino_ratio: Optional[float] = None
-    max_drawdown: Optional[float] = None
-    probability_of_ruin: Optional[float] = None
+    sharpe_ratio: float | None = None
+    sortino_ratio: float | None = None
+    max_drawdown: float | None = None
+    probability_of_ruin: float | None = None
     mean_return: float = 0.0
     std_dev: float = 0.0
 
@@ -35,8 +35,8 @@ class RiskReport(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     n_simulations: int
-    metrics: Dict[str, float] = Field(default_factory=dict)
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    metrics: dict[str, float] = Field(default_factory=dict)
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class RiskAnalyzer:
@@ -86,11 +86,11 @@ class RiskAnalyzer:
     def analyze_outcomes(
         self,
         outcomes: np.ndarray,
-        returns: Optional[np.ndarray] = None,
-        paths: Optional[List[np.ndarray]] = None,
+        returns: np.ndarray | None = None,
+        paths: list[np.ndarray] | None = None,
     ) -> RiskReport:
         """Produce a comprehensive risk report from final outcomes (and optionally returns/paths)."""
-        metrics: Dict[str, float] = {
+        metrics: dict[str, float] = {
             "var_95": self.compute_var(outcomes, 0.95),
             "cvar_95": self.compute_cvar(outcomes, 0.95),
             "mean": float(np.mean(outcomes)),
@@ -123,7 +123,7 @@ class MonteCarloAnalyzer:
     def __init__(self, risk_free_rate: float = 0.0):
         self.risk = RiskAnalyzer(risk_free_rate=risk_free_rate)
 
-    def analyze_results(self, results: List[SimulationResult]) -> RiskReport:
+    def analyze_results(self, results: list[SimulationResult]) -> RiskReport:
         """Analyze a collection of completed simulations."""
         if not results:
             raise ValueError("No simulation results provided")

@@ -7,9 +7,7 @@ Runs many independent simulations efficiently and collects results.
 from __future__ import annotations
 
 import concurrent.futures
-from typing import Callable, List, Optional
-
-import numpy as np
+from collections.abc import Callable
 
 from ..core import SimulationEngine, SimulationResult
 
@@ -26,8 +24,8 @@ class MonteCarloRunner:
         self,
         n_sims: int,
         factory: Callable[[int], SimulationEngine],
-        base_seed: Optional[int] = None,
-    ) -> List[SimulationResult]:
+        base_seed: int | None = None,
+    ) -> list[SimulationResult]:
         """
         Run n_sims simulations.
 
@@ -36,7 +34,7 @@ class MonteCarloRunner:
             factory: Callable that takes a simulation index and returns a configured SimulationEngine.
             base_seed: If provided, seeds will be base_seed + i for reproducibility.
         """
-        results: List[SimulationResult] = []
+        results: list[SimulationResult] = []
 
         def _run_one(i: int) -> SimulationResult:
             seed = base_seed + i if base_seed is not None else None

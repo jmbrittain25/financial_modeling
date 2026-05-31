@@ -1,22 +1,22 @@
 """Pytest configuration and shared fixtures."""
 
 import datetime as dt
-from typing import Callable
+from collections.abc import Callable
 
 import numpy as np
 import pytest
 
-from financial_simulator.core import (
-    SimulationEngine,
-    ComposedEventBuilder,
-    IntervalTiming,
-    OneTimeTiming,
-    FixedValue,
-    NormalDistribution,
-    DistributionValue,
-    AppreciationProcess,
-)
 from financial_simulator.analytics.risk import RiskReport
+from financial_simulator.core import (
+    AppreciationProcess,
+    ComposedEventBuilder,
+    DistributionValue,
+    FixedValue,
+    IntervalTiming,
+    NormalDistribution,
+    OneTimeTiming,
+    SimulationEngine,
+)
 
 
 @pytest.fixture
@@ -28,8 +28,10 @@ def seeded_rng():
 @pytest.fixture
 def rng_factory() -> Callable[[int], np.random.Generator]:
     """Factory for creating independent RNGs from integer seeds."""
+
     def _make(seed: int) -> np.random.Generator:
         return np.random.default_rng(seed)
+
     return _make
 
 
@@ -127,12 +129,14 @@ def engine_with_continuous(
 @pytest.fixture
 def stochastic_builder_factory() -> Callable[[float, float], ComposedEventBuilder]:
     """Returns a factory that creates a monthly DistributionValue builder."""
+
     def _make(mean: float, std: float) -> ComposedEventBuilder:
         return ComposedEventBuilder(
             timing=IntervalTiming(interval=dt.timedelta(days=30)),
             value_gen=DistributionValue(dist=NormalDistribution(mean=mean, std=std)),
             metadata={"type": "stochastic"},
         )
+
     return _make
 
 
@@ -158,4 +162,7 @@ def sample_risk_report() -> RiskReport:
 
 # --- Mark integration tests as slow ---
 def pytest_configure(config):
-    config.addinivalue_line("markers", "integration: marks tests as full end-to-end simulations (select with '-m integration')")
+    config.addinivalue_line(
+        "markers",
+        "integration: marks tests as full end-to-end simulations (select with '-m integration')",
+    )

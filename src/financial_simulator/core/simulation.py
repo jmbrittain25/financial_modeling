@@ -23,18 +23,18 @@ from __future__ import annotations
 
 import datetime as dt
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import numpy as np
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
-from .event import Event, EventBuilder, ComposedEventBuilder
+from .event import ComposedEventBuilder, Event, EventBuilder
 from .stochastic import GeometricBrownianMotion, MeanRevertingProcess
-
 
 # =============================================================================
 # Continuous Processes (state evolution between discrete events)
 # =============================================================================
+
 
 class ContinuousProcess(BaseModel, ABC):
     """Base class for processes that continuously mutate simulation state.
@@ -44,10 +44,10 @@ class ContinuousProcess(BaseModel, ABC):
 
     model_config = ConfigDict(extra="forbid", frozen=False)
 
-    name: Optional[str] = None
+    name: str | None = None
 
     @abstractmethod
-    def advance(self, state: Dict[str, Any], delta: dt.timedelta) -> None:
+    def advance(self, state: dict[str, Any], delta: dt.timedelta) -> None:
         """Mutate the provided state dict in place for the elapsed time."""
         ...
 
@@ -61,7 +61,7 @@ class AppreciationProcess(ContinuousProcess):
     rate: float = Field(description="Annual growth rate (e.g. 0.04 for 4%)")
     var: str = Field(default="property_value", description="State key to compound")
 
-    def advance(self, state: Dict[str, Any], delta: dt.timedelta) -> None:
+    def advance(self, state: dict[str, Any], delta: dt.timedelta) -> None:
         if self.var not in state:
             return
         years = delta.total_seconds() / (365.25 * 24 * 3600)
@@ -75,7 +75,7 @@ class GBMContinuousProcess(ContinuousProcess):
     process: GeometricBrownianMotion
     var: str
 
-    def advance(self, state: Dict[str, Any], delta: dt.timedelta) -> None:
+    def advance(self, state: dict[str, Any], delta: dt.timedelta) -> None:
         if self.var not in state:
             return
         current = state[self.var]
@@ -89,7 +89,7 @@ class MeanRevertingContinuousProcess(ContinuousProcess):
     process: MeanRevertingProcess
     var: str
 
-    def advance(self, state: Dict[str, Any], delta: dt.timedelta) -> None:
+    def advance(self, state: dict[str, Any], delta: dt.timedelta) -> None:
         if self.var not in state:
             return
         current = state[self.var]
@@ -101,29 +101,31 @@ class MeanRevertingContinuousProcess(ContinuousProcess):
 # Result object (what you get after engine.run())
 # =============================================================================
 
+
 class SimulationResult(BaseModel):
     """Immutable snapshot of a completed simulation run."""
 
     name: str
     start: dt.datetime
     end: dt.datetime
-    events: List[Event] = Field(default_factory=list)
-    final_state: Dict[str, Any]
-    state_history: Dict[dt.datetime, Dict[str, Any]] = Field(default_factory=dict)
+    events: list[Event] = Field(default_factory=list)
+    final_state: dict[str, Any]
+    state_history: dict[dt.datetime, dict[str, Any]] = Field(default_factory=dict)
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return self.model_dump(mode="json")
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> SimulationResult:
+    def from_dict(cls, data: dict[str, Any]) -> SimulationResult:
         return cls.model_validate(data)
 
 
 # =============================================================================
 # Main SimulationEngine
 # =============================================================================
+
 
 class SimulationEngine(BaseModel):
     """The primary entry point for running financial simulations.
@@ -164,17 +166,17 @@ class SimulationEngine(BaseModel):
     end: dt.datetime
 
     # Declarative configuration (persisted / serialized)
-    event_builders: List[EventBuilder] = Field(default_factory=list)
-    continuous_processes: List[ContinuousProcess] = Field(default_factory=list)
-    initial_state: Dict[str, Any] = Field(default_factory=dict)
-    seed: Optional[int] = None
+    event_builders: list[EventBuilder] = Field(default_factory=list)
+    continuous_processes: list[ContinuousProcess] = Field(default_factory=list)
+    initial_state: dict[str, Any] = Field(default_factory=dict)
+    seed: int | None = None
 
     # Runtime-only (excluded from model_dump by default via exclude)
-    events: List[Event] = Field(default_factory=list, exclude=True)
-    state: Dict[str, Any] = Field(default_factory=dict, exclude=True)
-    state_history: Dict[dt.datetime, Dict[str, Any]] = Field(default_factory=dict, exclude=True)
+    events: list[Event] = Field(default_factory=list, exclude=True)
+    state: dict[str, Any] = Field(default_factory=dict, exclude=True)
+    state_history: dict[dt.datetime, dict[str, Any]] = Field(default_factory=dict, exclude=True)
 
-    _rng: Optional[np.random.Generator] = PrivateAttr(default=None)
+    _rng: np.random.Generator | None = PrivateAttr(default=None)
     _is_finished: bool = PrivateAttr(default=False)
 
     # ------------------------------------------------------------------
@@ -219,7 +221,7 @@ class SimulationEngine(BaseModel):
 
         while True:
             # 1. Ask every builder for its next event time
-            candidates: List[tuple[dt.datetime, EventBuilder]] = []
+            candidates: list[tuple[dt.datetime, EventBuilder]] = []
             for builder in self.event_builders:
                 nt = builder.next_event_time(current, self.end, self.state)
                 if nt is not None and nt <= self.end:
@@ -237,8 +239,8 @@ class SimulationEngine(BaseModel):
                 proc.advance(self.state, delta)
 
             # 4. Generate events from all builders that fire exactly at next_time
-            events_at_time: List[Event] = []
-            state_updates: Dict[str, Any] = {}
+            events_at_time: list[Event] = []
+            state_updates: dict[str, Any] = {}
 
             for nt, builder in candidates:
                 if nt == next_time:
@@ -284,7 +286,7 @@ class SimulationEngine(BaseModel):
             state_history={t: dict(s) for t, s in self.state_history.items()},
         )
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Serialize the declarative configuration (not runtime state)."""
         return {
             "name": self.name,
@@ -293,20 +295,18 @@ class SimulationEngine(BaseModel):
             "initial_state": self.initial_state,
             "seed": self.seed,
             "event_builders": [b.to_dict() for b in self.event_builders],
-            "continuous_processes": [
-                p.model_dump(mode="json") for p in self.continuous_processes
-            ],
+            "continuous_processes": [p.model_dump(mode="json") for p in self.continuous_processes],
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> SimulationEngine:
+    def from_dict(cls, data: dict[str, Any]) -> SimulationEngine:
         """Rehydrate a SimulationEngine from a serialized configuration.
 
         Note: runtime state (events, current state) is not restored; call run() again.
         """
         builders = [ComposedEventBuilder.from_dict(b) for b in data.get("event_builders", [])]
         # Continuous processes - only Appreciation for now; extend as needed
-        procs: List[ContinuousProcess] = []
+        procs: list[ContinuousProcess] = []
         for p in data.get("continuous_processes", []):
             if p.get("type") == "Appreciation" or "rate" in p:  # heuristic
                 procs.append(AppreciationProcess.model_validate(p))

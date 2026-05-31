@@ -6,21 +6,21 @@ rich quantitative analytics, and support for future autonomous AI agents.
 """
 
 from .core import (
+    BetaDistribution,
+    Event,
+    GeometricBrownianMotion,
+    Loan,
+    MeanRevertingProcess,
+    Portfolio,
     SimulationEngine,
     SimulationResult,
-    Event,
-    create_event_builder,
-    BetaDistribution,
-    GeometricBrownianMotion,
-    MeanRevertingProcess,
-    Loan,
     TaxSchedule,
-    Portfolio,
+    create_event_builder,
 )
 
 # Analytics (Phase 2)
 try:
-    from .analytics.risk import RiskAnalyzer, MonteCarloAnalyzer, RiskReport
+    from .analytics.risk import MonteCarloAnalyzer, RiskAnalyzer, RiskReport
 except ImportError:
     RiskAnalyzer = MonteCarloAnalyzer = RiskReport = None  # type: ignore
 

@@ -7,10 +7,12 @@ Tests must match results by simulation identity (name/seed), not list index.
 
 import datetime as dt
 
-import numpy as np
-import pytest
-
-from financial_simulator.core import SimulationEngine, ComposedEventBuilder, IntervalTiming, FixedValue
+from financial_simulator.core import (
+    ComposedEventBuilder,
+    FixedValue,
+    IntervalTiming,
+    SimulationEngine,
+)
 from financial_simulator.core.distributions import NormalDistribution
 from financial_simulator.core.event import DistributionValue
 from financial_simulator.monte_carlo.runner import MonteCarloRunner
@@ -32,6 +34,7 @@ def _make_simple_factory(base: int = 1000):
             )
         )
         return eng
+
     return factory
 
 
@@ -63,7 +66,9 @@ def test_monte_carlo_runner_overrides_seed_with_base_plus_i():
             initial_state={"cumulative_cash": 0.0},
         )
         eng.add_event_builder(
-            ComposedEventBuilder(timing=IntervalTiming(interval=dt.timedelta(days=1)), value_gen=FixedValue(1))
+            ComposedEventBuilder(
+                timing=IntervalTiming(interval=dt.timedelta(days=1)), value_gen=FixedValue(1)
+            )
         )
         return eng
 

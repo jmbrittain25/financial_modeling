@@ -5,21 +5,20 @@ Run with:
     streamlit run app/streamlit_app.py
 """
 
-import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
-from datetime import datetime
+import streamlit as st
 
-from financial_simulator.core import SimulationEngine, SimulationResult
-from financial_simulator.monte_carlo import MonteCarloRunner
-from examples.retirement import create_retirement_engine
 from examples.business_cashflow import create_business_engine
+from examples.retirement import create_retirement_engine
+from financial_simulator.core import SimulationResult
+from financial_simulator.monte_carlo import MonteCarloRunner
 
 st.set_page_config(
     page_title="Financial Simulator",
     page_icon="📈",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
 )
 
 st.title("Financial Simulation Platform")
@@ -34,26 +33,27 @@ with st.sidebar:
     scenario_name = st.selectbox(
         "Scenario",
         ["Retirement Planning", "Small Business Cash Flow"],
-        help="Choose a pre-built scenario"
+        help="Choose a pre-built scenario",
     )
 
     n_sims = st.slider(
         "Number of Simulations",
-        min_value=10, max_value=1000, value=100, step=10,
-        help="Higher values give better statistics but take longer"
+        min_value=10,
+        max_value=1000,
+        value=100,
+        step=10,
+        help="Higher values give better statistics but take longer",
     )
 
     base_seed = st.number_input(
-        "Base Random Seed",
-        value=42, step=1,
-        help="Change this to get different random outcomes"
+        "Base Random Seed", value=42, step=1, help="Change this to get different random outcomes"
     )
 
     y_axis = st.selectbox(
         "Time Series Metric",
         options=["cumulative_cash", "cash", "portfolio_value", "property_value"],
         index=0,
-        help="Which state variable to plot over time"
+        help="Which state variable to plot over time",
     )
 
     run_button = st.button("🚀 Run Monte Carlo", type="primary", use_container_width=True)
@@ -66,7 +66,11 @@ if "results" not in st.session_state:
     st.session_state.scenario_name = None
 
 if run_button:
-    factory = create_retirement_engine if scenario_name == "Retirement Planning" else create_business_engine
+    factory = (
+        create_retirement_engine
+        if scenario_name == "Retirement Planning"
+        else create_business_engine
+    )
 
     with st.spinner(f"Running {n_sims} simulations... this may take a moment"):
         runner = MonteCarloRunner(n_jobs=4)
@@ -86,12 +90,9 @@ if results is None:
     st.stop()
 
 # Tabs
-tab_overview, tab_timeseries, tab_risk, tab_details = st.tabs([
-    "📊 Overview",
-    "📈 Time Series",
-    "📉 Risk Metrics",
-    "🔍 Selected Simulation"
-])
+tab_overview, tab_timeseries, tab_risk, tab_details = st.tabs(
+    ["📊 Overview", "📈 Time Series", "📉 Risk Metrics", "🔍 Selected Simulation"]
+)
 
 # =====================
 # TAB 1: Overview
@@ -115,7 +116,9 @@ with tab_overview:
     # Distribution
     fig = go.Figure()
     fig.add_trace(go.Histogram(x=final_values, nbinsx=30, name="Final Value Distribution"))
-    fig.update_layout(title="Distribution of Final Outcomes", xaxis_title="Final Value ($)", yaxis_title="Count")
+    fig.update_layout(
+        title="Distribution of Final Outcomes", xaxis_title="Final Value ($)", yaxis_title="Count"
+    )
     st.plotly_chart(fig, use_container_width=True)
 
 # =====================
@@ -130,7 +133,9 @@ with tab_timeseries:
         if not res.state_history:
             continue
         times = list(res.state_history.keys())
-        values = [res.state_history[t].get(y_axis, res.state_history[t].get("cash", 0)) for t in times]
+        values = [
+            res.state_history[t].get(y_axis, res.state_history[t].get("cash", 0)) for t in times
+        ]
         df = pd.DataFrame({"time": times, "value": values, "sim_id": i})
         all_dfs.append(df)
 
@@ -144,7 +149,7 @@ with tab_timeseries:
             "Highlight specific simulations (by index)",
             options=list(range(len(results))),
             default=[],
-            help="Selected simulations will be drawn thicker and more opaque"
+            help="Selected simulations will be drawn thicker and more opaque",
         )
 
         # Create Plotly figure
@@ -154,22 +159,24 @@ with tab_timeseries:
             sim_df = combined[combined["sim_id"] == sim_id]
             is_highlighted = sim_id in highlight_sims
 
-            fig.add_trace(go.Scatter(
-                x=sim_df["time"],
-                y=sim_df["value"],
-                mode="lines",
-                name=f"Sim {sim_id}",
-                line=dict(width=2.5 if is_highlighted else 0.8),
-                opacity=0.85 if is_highlighted else 0.25,
-                showlegend=is_highlighted
-            ))
+            fig.add_trace(
+                go.Scatter(
+                    x=sim_df["time"],
+                    y=sim_df["value"],
+                    mode="lines",
+                    name=f"Sim {sim_id}",
+                    line=dict(width=2.5 if is_highlighted else 0.8),
+                    opacity=0.85 if is_highlighted else 0.25,
+                    showlegend=is_highlighted,
+                )
+            )
 
         fig.update_layout(
             title=f"Time Series: {y_axis} across all simulations",
             xaxis_title="Date",
             yaxis_title=y_axis,
             hovermode="x unified",
-            height=550
+            height=550,
         )
         st.plotly_chart(fig, use_container_width=True, key="timeseries")
 
@@ -195,7 +202,7 @@ with tab_details:
     selected_id = st.selectbox(
         "Select simulation to inspect",
         options=list(range(len(results))),
-        format_func=lambda x: f"Simulation #{x}"
+        format_func=lambda x: f"Simulation #{x}",
     )
 
     selected_result: SimulationResult = results[selected_id]
@@ -213,14 +220,16 @@ with tab_details:
     with col2:
         st.markdown("**Events in this simulation**")
         if selected_result.events:
-            events_df = pd.DataFrame([
-                {
-                    "Time": e.time.strftime("%Y-%m-%d"),
-                    "Value": round(e.value, 2),
-                    "Metadata": e.metadata
-                }
-                for e in selected_result.events
-            ])
+            events_df = pd.DataFrame(
+                [
+                    {
+                        "Time": e.time.strftime("%Y-%m-%d"),
+                        "Value": round(e.value, 2),
+                        "Metadata": e.metadata,
+                    }
+                    for e in selected_result.events
+                ]
+            )
             st.dataframe(events_df, use_container_width=True, height=400)
         else:
             st.info("No events recorded for this simulation.")

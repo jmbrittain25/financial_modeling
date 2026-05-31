@@ -19,22 +19,22 @@ from __future__ import annotations
 
 import datetime as dt
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Tuple, Literal, Union
+from typing import Any, Literal
 
 try:
     from typing import Annotated  # py >= 3.9
 except ImportError:
-    from typing_extensions import Annotated
+    from typing import Annotated
 
 import numpy as np
-from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, TypeAdapter, model_validator
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, TypeAdapter
 
-from .distributions import Distribution, create_distribution, AnyDistribution
-
+from .distributions import AnyDistribution, create_distribution
 
 # =============================================================================
 # Event
 # =============================================================================
+
 
 class Event(BaseModel):
     """A single financial event (cash flow) at a specific time.
@@ -47,19 +47,19 @@ class Event(BaseModel):
 
     time: dt.datetime
     value: float
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
     model_config = ConfigDict(
         extra="allow",  # allow extra runtime metadata if useful
-        frozen=True,    # events are records; immutable once created
+        frozen=True,  # events are records; immutable once created
     )
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """JSON-serializable representation (datetimes become ISO strings)."""
         return self.model_dump(mode="json")
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> Event:
+    def from_dict(cls, data: dict[str, Any]) -> Event:
         return cls.model_validate(data)
 
 
@@ -67,20 +67,21 @@ class Event(BaseModel):
 # Timing strategies (when events fire)
 # =============================================================================
 
+
 class Timing(BaseModel, ABC):
     """Abstract base for event timing policies."""
 
     model_config = ConfigDict(extra="forbid", frozen=False)
 
     @abstractmethod
-    def reset(self, rng: Optional[np.random.Generator] = None) -> None:
+    def reset(self, rng: np.random.Generator | None = None) -> None:
         """Reset internal state machine. Call before each simulation run."""
         ...
 
     @abstractmethod
     def next_time(
-        self, current: dt.datetime, end: dt.datetime, state: Dict[str, Any]
-    ) -> Optional[dt.datetime]:
+        self, current: dt.datetime, end: dt.datetime, state: dict[str, Any]
+    ) -> dt.datetime | None:
         """Return the next candidate event time >= current (or None if exhausted)."""
         ...
 
@@ -97,12 +98,12 @@ class OneTimeTiming(Timing):
     time: dt.datetime
     _fired: bool = PrivateAttr(default=False)
 
-    def reset(self, rng: Optional[np.random.Generator] = None) -> None:
+    def reset(self, rng: np.random.Generator | None = None) -> None:
         self._fired = False
 
     def next_time(
-        self, current: dt.datetime, end: dt.datetime, state: Dict[str, Any]
-    ) -> Optional[dt.datetime]:
+        self, current: dt.datetime, end: dt.datetime, state: dict[str, Any]
+    ) -> dt.datetime | None:
         if not self._fired and current <= self.time <= end:
             return self.time
         return None
@@ -116,16 +117,16 @@ class IntervalTiming(Timing):
 
     type: Literal["Interval"] = "Interval"
     interval: dt.timedelta
-    start_time: Optional[dt.datetime] = None
+    start_time: dt.datetime | None = None
 
-    _current_next: Optional[dt.datetime] = PrivateAttr(default=None)
+    _current_next: dt.datetime | None = PrivateAttr(default=None)
 
-    def reset(self, rng: Optional[np.random.Generator] = None) -> None:
+    def reset(self, rng: np.random.Generator | None = None) -> None:
         self._current_next = self.start_time
 
     def next_time(
-        self, current: dt.datetime, end: dt.datetime, state: Dict[str, Any]
-    ) -> Optional[dt.datetime]:
+        self, current: dt.datetime, end: dt.datetime, state: dict[str, Any]
+    ) -> dt.datetime | None:
         if self._current_next is None:
             self._current_next = (
                 current + self.interval if self.start_time is None else self.start_time
@@ -155,24 +156,22 @@ class RandomTiming(Timing):
     n: int = Field(ge=1)
     distribution: Literal["uniform"] = "uniform"  # extensible later
 
-    _times: List[dt.datetime] = PrivateAttr(default_factory=list)
+    _times: list[dt.datetime] = PrivateAttr(default_factory=list)
     _index: int = PrivateAttr(default=0)
 
-    def reset(self, rng: Optional[np.random.Generator] = None) -> None:
+    def reset(self, rng: np.random.Generator | None = None) -> None:
         rng = rng or np.random.default_rng()
         delta_days = (self.end - self.start).days
         if self.distribution == "uniform":
             random_days = sorted(rng.integers(0, delta_days + 1, size=self.n))
-            self._times = [
-                self.start + dt.timedelta(days=int(d)) for d in random_days
-            ]
+            self._times = [self.start + dt.timedelta(days=int(d)) for d in random_days]
         else:
             raise ValueError(f"Unsupported distribution for RandomTiming: {self.distribution}")
         self._index = 0
 
     def next_time(
-        self, current: dt.datetime, end: dt.datetime, state: Dict[str, Any]
-    ) -> Optional[dt.datetime]:
+        self, current: dt.datetime, end: dt.datetime, state: dict[str, Any]
+    ) -> dt.datetime | None:
         while self._index < len(self._times) and self._times[self._index] < current:
             self._index += 1
         if self._index < len(self._times) and self._times[self._index] <= end:
@@ -187,21 +186,21 @@ class SeasonalTiming(Timing):
     """Wraps another Timing and only allows events in the given months (1-12)."""
 
     type: Literal["Seasonal"] = "Seasonal"
-    inner: "AnyTiming"
-    months: List[int] = Field(min_length=1)
+    inner: AnyTiming
+    months: list[int] = Field(min_length=1)
 
     _allowed_months: set[int] = PrivateAttr(default_factory=set)
 
     def model_post_init(self, __context: Any) -> None:
         self._allowed_months = set(self.months)
 
-    def reset(self, rng: Optional[np.random.Generator] = None) -> None:
+    def reset(self, rng: np.random.Generator | None = None) -> None:
         self.inner.reset(rng)
         # months set already populated
 
     def next_time(
-        self, current: dt.datetime, end: dt.datetime, state: Dict[str, Any]
-    ) -> Optional[dt.datetime]:
+        self, current: dt.datetime, end: dt.datetime, state: dict[str, Any]
+    ) -> dt.datetime | None:
         nt = self.inner.next_time(current, end, state)
         while nt is not None and nt.month not in self._allowed_months:
             self.inner.advance()
@@ -214,14 +213,14 @@ class SeasonalTiming(Timing):
 
 # Discriminated union for Timing (used for fields + validation)
 AnyTiming = Annotated[
-    Union[OneTimeTiming, IntervalTiming, RandomTiming, SeasonalTiming],
+    OneTimeTiming | IntervalTiming | RandomTiming | SeasonalTiming,
     Field(discriminator="type"),
 ]
 
 _timing_adapter: TypeAdapter[AnyTiming] = TypeAdapter(AnyTiming)
 
 
-def create_timing(data: Dict[str, Any] | Timing) -> Timing:
+def create_timing(data: dict[str, Any] | Timing) -> Timing:
     """Factory used by legacy config loaders. Delegates to Pydantic validation.
 
     Accepts both the modern Pydantic field names and the legacy shapes used
@@ -248,19 +247,19 @@ def create_timing(data: Dict[str, Any] | Timing) -> Timing:
 # Value Generators (how large is the cash flow / what side effects)
 # =============================================================================
 
+
 class ValueGenerator(BaseModel, ABC):
     """Produces the numeric value (and optional side effects) for an event."""
 
     model_config = ConfigDict(extra="forbid", frozen=False)
 
     @abstractmethod
-    def reset(self, rng: Optional[np.random.Generator] = None) -> None:
-        ...
+    def reset(self, rng: np.random.Generator | None = None) -> None: ...
 
     @abstractmethod
     def get_value(
-        self, time: dt.datetime, state: Dict[str, Any], rng: Optional[np.random.Generator] = None
-    ) -> Tuple[float, Dict[str, Any]]:
+        self, time: dt.datetime, state: dict[str, Any], rng: np.random.Generator | None = None
+    ) -> tuple[float, dict[str, Any]]:
         """Return (cash_value, extra_metadata).
 
         extra_metadata may contain the special key 'state_update' (dict) which the
@@ -283,12 +282,12 @@ class FixedValue(ValueGenerator):
             data["value"] = value
         super().__init__(**data)
 
-    def reset(self, rng: Optional[np.random.Generator] = None) -> None:
+    def reset(self, rng: np.random.Generator | None = None) -> None:
         pass
 
     def get_value(
-        self, time: dt.datetime, state: Dict[str, Any], rng: Optional[np.random.Generator] = None
-    ) -> Tuple[float, Dict[str, Any]]:
+        self, time: dt.datetime, state: dict[str, Any], rng: np.random.Generator | None = None
+    ) -> tuple[float, dict[str, Any]]:
         return self.value, {}
 
 
@@ -303,15 +302,15 @@ class GrowingValue(ValueGenerator):
     growth_rate: float  # annual continuous compounding rate, e.g. 0.03
 
     _current: float = PrivateAttr(default=0.0)
-    _last_time: Optional[dt.datetime] = PrivateAttr(default=None)
+    _last_time: dt.datetime | None = PrivateAttr(default=None)
 
-    def reset(self, rng: Optional[np.random.Generator] = None) -> None:
+    def reset(self, rng: np.random.Generator | None = None) -> None:
         self._current = self.initial
         self._last_time = None
 
     def get_value(
-        self, time: dt.datetime, state: Dict[str, Any], rng: Optional[np.random.Generator] = None
-    ) -> Tuple[float, Dict[str, Any]]:
+        self, time: dt.datetime, state: dict[str, Any], rng: np.random.Generator | None = None
+    ) -> tuple[float, dict[str, Any]]:
         if self._last_time is not None:
             delta_years = (time - self._last_time).days / 365.25
             if delta_years > 0:
@@ -326,13 +325,13 @@ class DistributionValue(ValueGenerator):
     type: Literal["Distribution"] = "Distribution"
     dist: AnyDistribution
 
-    def reset(self, rng: Optional[np.random.Generator] = None) -> None:
+    def reset(self, rng: np.random.Generator | None = None) -> None:
         # Distributions are stateless
         pass
 
     def get_value(
-        self, time: dt.datetime, state: Dict[str, Any], rng: Optional[np.random.Generator] = None
-    ) -> Tuple[float, Dict[str, Any]]:
+        self, time: dt.datetime, state: dict[str, Any], rng: np.random.Generator | None = None
+    ) -> tuple[float, dict[str, Any]]:
         val = self.dist.sample(rng)
         return val, {}
 
@@ -347,12 +346,12 @@ class RateChangeValue(ValueGenerator):
     dist: AnyDistribution
     update_key: str
 
-    def reset(self, rng: Optional[np.random.Generator] = None) -> None:
+    def reset(self, rng: np.random.Generator | None = None) -> None:
         pass
 
     def get_value(
-        self, time: dt.datetime, state: Dict[str, Any], rng: Optional[np.random.Generator] = None
-    ) -> Tuple[float, Dict[str, Any]]:
+        self, time: dt.datetime, state: dict[str, Any], rng: np.random.Generator | None = None
+    ) -> tuple[float, dict[str, Any]]:
         new_val = self.dist.sample(rng)
         return 0.0, {"state_update": {self.update_key: new_val}}
 
@@ -372,7 +371,7 @@ class VariableRateLoanValue(ValueGenerator):
 
     _balance: float = PrivateAttr(default=0.0)
     _month: int = PrivateAttr(default=0)
-    _last_time: Optional[dt.datetime] = PrivateAttr(default=None)
+    _last_time: dt.datetime | None = PrivateAttr(default=None)
 
     def model_post_init(self, __context: Any) -> None:
         # Ensure internal state is initialized from declarative fields on construction
@@ -380,14 +379,14 @@ class VariableRateLoanValue(ValueGenerator):
         self._month = 0
         self._last_time = None
 
-    def reset(self, rng: Optional[np.random.Generator] = None) -> None:
+    def reset(self, rng: np.random.Generator | None = None) -> None:
         self._balance = self.principal
         self._month = 0
         self._last_time = None
 
     def get_value(
-        self, time: dt.datetime, state: Dict[str, Any], rng: Optional[np.random.Generator] = None
-    ) -> Tuple[float, Dict[str, Any]]:
+        self, time: dt.datetime, state: dict[str, Any], rng: np.random.Generator | None = None
+    ) -> tuple[float, dict[str, Any]]:
         if self._month >= self.term_months or self._balance <= 0:
             return 0.0, {}
 
@@ -411,7 +410,7 @@ class VariableRateLoanValue(ValueGenerator):
         self._month += 1
         self._last_time = time
 
-        extra: Dict[str, Any] = {
+        extra: dict[str, Any] = {
             "interest": interest,
             "principal": principal_paid,
             "rate": current_rate,
@@ -427,12 +426,12 @@ class DividendValue(ValueGenerator):
     annual_yield: float
     investment_value_key: str = "portfolio_value"
 
-    def reset(self, rng: Optional[np.random.Generator] = None) -> None:
+    def reset(self, rng: np.random.Generator | None = None) -> None:
         pass
 
     def get_value(
-        self, time: dt.datetime, state: Dict[str, Any], rng: Optional[np.random.Generator] = None
-    ) -> Tuple[float, Dict[str, Any]]:
+        self, time: dt.datetime, state: dict[str, Any], rng: np.random.Generator | None = None
+    ) -> tuple[float, dict[str, Any]]:
         portfolio_value = state.get(self.investment_value_key, 0.0)
         dividend = portfolio_value * self.annual_yield / 12  # monthly approximation
         return dividend, {"source": "dividend"}
@@ -443,14 +442,14 @@ class InvestmentContributionValue(ValueGenerator):
 
     type: Literal["InvestmentContribution"] = "InvestmentContribution"
     amount: float
-    growth_key: Optional[str] = None  # if set, contribution grows with this state variable
+    growth_key: str | None = None  # if set, contribution grows with this state variable
 
-    def reset(self, rng: Optional[np.random.Generator] = None) -> None:
+    def reset(self, rng: np.random.Generator | None = None) -> None:
         pass
 
     def get_value(
-        self, time: dt.datetime, state: Dict[str, Any], rng: Optional[np.random.Generator] = None
-    ) -> Tuple[float, Dict[str, Any]]:
+        self, time: dt.datetime, state: dict[str, Any], rng: np.random.Generator | None = None
+    ) -> tuple[float, dict[str, Any]]:
         amount = self.amount
         if self.growth_key and self.growth_key in state:
             amount *= state[self.growth_key]
@@ -468,36 +467,37 @@ class TaxEventValue(ValueGenerator):
     base_key: str
     tax_key: str = "tax_paid"
 
-    def reset(self, rng: Optional[np.random.Generator] = None) -> None:
+    def reset(self, rng: np.random.Generator | None = None) -> None:
         pass
 
     def get_value(
-        self, time: dt.datetime, state: Dict[str, Any], rng: Optional[np.random.Generator] = None
-    ) -> Tuple[float, Dict[str, Any]]:
+        self, time: dt.datetime, state: dict[str, Any], rng: np.random.Generator | None = None
+    ) -> tuple[float, dict[str, Any]]:
         base = state.get(self.base_key, 0.0)
         tax = base * self.rate
-        return -tax, {"tax": tax, "state_update": {self.tax_key: state.get(self.tax_key, 0.0) + tax}}
+        return -tax, {
+            "tax": tax,
+            "state_update": {self.tax_key: state.get(self.tax_key, 0.0) + tax},
+        }
 
 
 # ValueGenerator discriminated union + factory
 AnyValueGenerator = Annotated[
-    Union[
-        FixedValue,
-        GrowingValue,
-        DistributionValue,
-        RateChangeValue,
-        VariableRateLoanValue,
-        DividendValue,
-        InvestmentContributionValue,
-        TaxEventValue,
-    ],
+    FixedValue
+    | GrowingValue
+    | DistributionValue
+    | RateChangeValue
+    | VariableRateLoanValue
+    | DividendValue
+    | InvestmentContributionValue
+    | TaxEventValue,
     Field(discriminator="type"),
 ]
 
 _vg_adapter: TypeAdapter[AnyValueGenerator] = TypeAdapter(AnyValueGenerator)
 
 
-def create_value_generator(data: Dict[str, Any] | ValueGenerator) -> ValueGenerator:
+def create_value_generator(data: dict[str, Any] | ValueGenerator) -> ValueGenerator:
     """Factory for ValueGenerator from config dicts (supports nested distributions)."""
     if isinstance(data, ValueGenerator):
         return data
@@ -511,6 +511,7 @@ def create_value_generator(data: Dict[str, Any] | ValueGenerator) -> ValueGenera
 # EventBuilder (the primary extension point)
 # =============================================================================
 
+
 class EventBuilder(BaseModel, ABC):
     """Produces a stream of Events during a simulation run.
 
@@ -519,23 +520,21 @@ class EventBuilder(BaseModel, ABC):
 
     model_config = ConfigDict(extra="forbid", frozen=False)
 
-    name: Optional[str] = None
-    metadata: Dict[str, Any] = Field(default_factory=dict)
+    name: str | None = None
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
     @abstractmethod
-    def reset(self, rng: Optional[np.random.Generator] = None) -> None:
-        ...
+    def reset(self, rng: np.random.Generator | None = None) -> None: ...
 
     @abstractmethod
     def next_event_time(
-        self, current: dt.datetime, end: dt.datetime, state: Dict[str, Any]
-    ) -> Optional[dt.datetime]:
-        ...
+        self, current: dt.datetime, end: dt.datetime, state: dict[str, Any]
+    ) -> dt.datetime | None: ...
 
     @abstractmethod
     def generate_event(
-        self, time: dt.datetime, state: Dict[str, Any], rng: Optional[np.random.Generator] = None
-    ) -> Optional[Event]:
+        self, time: dt.datetime, state: dict[str, Any], rng: np.random.Generator | None = None
+    ) -> Event | None:
         """Return an Event if one is due at exactly this time, else None.
 
         The engine is responsible for calling next_event_time first to decide the
@@ -543,11 +542,11 @@ class EventBuilder(BaseModel, ABC):
         """
         ...
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         return self.model_dump(mode="json", exclude_none=True)
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> EventBuilder:
+    def from_dict(cls, data: dict[str, Any]) -> EventBuilder:
         return cls.model_validate(data)
 
 
@@ -555,19 +554,19 @@ class ComposedEventBuilder(EventBuilder):
     """The standard concrete implementation: Timing + ValueGenerator + metadata."""
 
     timing: AnyTiming
-    value_gen: "AnyValueGenerator"
+    value_gen: AnyValueGenerator
 
     # Internal cursor used by next_event_time to avoid recomputing
-    _current_next: Optional[dt.datetime] = PrivateAttr(default=None)
+    _current_next: dt.datetime | None = PrivateAttr(default=None)
 
-    def reset(self, rng: Optional[np.random.Generator] = None) -> None:
+    def reset(self, rng: np.random.Generator | None = None) -> None:
         self.timing.reset(rng)
         self.value_gen.reset(rng)
         self._current_next = None
 
     def next_event_time(
-        self, current: dt.datetime, end: dt.datetime, state: Dict[str, Any]
-    ) -> Optional[dt.datetime]:
+        self, current: dt.datetime, end: dt.datetime, state: dict[str, Any]
+    ) -> dt.datetime | None:
         if self._current_next is None or self._current_next <= current:
             nt = self.timing.next_time(current, end, state)
             # Skip any stale times that are in the past (defensive)
@@ -578,8 +577,8 @@ class ComposedEventBuilder(EventBuilder):
         return self._current_next
 
     def generate_event(
-        self, time: dt.datetime, state: Dict[str, Any], rng: Optional[np.random.Generator] = None
-    ) -> Optional[Event]:
+        self, time: dt.datetime, state: dict[str, Any], rng: np.random.Generator | None = None
+    ) -> Event | None:
         scheduled = self.next_event_time(time, time, state)  # cheap check using cached
         if scheduled != time:
             return None
@@ -602,15 +601,13 @@ class ComposedEventBuilder(EventBuilder):
 
 
 # Top-level factory used by legacy simulation_server / config loaders
-def create_event_builder(data: Dict[str, Any]) -> EventBuilder:
+def create_event_builder(data: dict[str, Any]) -> EventBuilder:
     """Create a ComposedEventBuilder (or future subclasses) from a full config dict."""
     timing = create_timing(data["timing"])
     value_gen = create_value_generator(data["value_gen"])
     metadata = data.get("metadata", {})
     name = data.get("name")
-    return ComposedEventBuilder(
-        timing=timing, value_gen=value_gen, metadata=metadata, name=name
-    )
+    return ComposedEventBuilder(timing=timing, value_gen=value_gen, metadata=metadata, name=name)
 
 
 __all__ = [

@@ -7,8 +7,6 @@ They are intentionally kept simple and extensible.
 
 from __future__ import annotations
 
-from typing import List, Optional
-
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -39,7 +37,7 @@ class TaxBracket(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     lower: float
-    upper: Optional[float] = None
+    upper: float | None = None
     rate: float
 
 
@@ -49,7 +47,7 @@ class TaxSchedule(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     name: str
-    brackets: List[TaxBracket]
+    brackets: list[TaxBracket]
     standard_deduction: float = 0.0
 
     def effective_rate(self, taxable_income: float) -> float:
@@ -81,7 +79,7 @@ class Portfolio(BaseModel):
     name: str
     assets: dict[str, float] = Field(default_factory=dict)  # asset_name -> allocation %
 
-    def normalize(self) -> "Portfolio":
+    def normalize(self) -> Portfolio:
         """Return a new portfolio with allocations normalized to sum to 1."""
         total = sum(self.assets.values())
         if total == 0:

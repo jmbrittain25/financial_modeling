@@ -5,18 +5,18 @@ These are marked 'integration' and may be deselected with:
 """
 
 import datetime as dt
+
 import pytest
 
+from financial_simulator.analytics.risk import MonteCarloAnalyzer
 from financial_simulator.core import (
-    SimulationEngine,
-    ComposedEventBuilder,
-    IntervalTiming,
-    FixedValue,
     AppreciationProcess,
+    ComposedEventBuilder,
+    FixedValue,
+    IntervalTiming,
+    SimulationEngine,
 )
 from financial_simulator.monte_carlo.runner import MonteCarloRunner
-from financial_simulator.analytics.risk import MonteCarloAnalyzer
-
 
 pytestmark = pytest.mark.integration
 
@@ -51,6 +51,7 @@ def test_full_simulation_using_retirement_style_pattern():
 
 def test_end_to_end_monte_carlo_plus_risk_analysis():
     """Run a small MC batch and feed results into MonteCarloAnalyzer."""
+
     def factory(i: int) -> SimulationEngine:
         eng = SimulationEngine(
             name=f"MC-Int-{i}",

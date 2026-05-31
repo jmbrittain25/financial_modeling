@@ -3,19 +3,17 @@
 import datetime as dt
 
 import numpy as np
-import pytest
 
+from financial_simulator.core.distributions import NormalDistribution
 from financial_simulator.core.event import (
     ComposedEventBuilder,
+    DistributionValue,
+    FixedValue,
     IntervalTiming,
     OneTimeTiming,
-    FixedValue,
-    DistributionValue,
     create_event_builder,
-    create_timing,
     create_value_generator,
 )
-from financial_simulator.core.distributions import NormalDistribution
 
 
 def test_composed_builder_produces_events_in_order():
@@ -83,6 +81,7 @@ def test_composed_builder_with_distribution_is_reproducible():
 
 # --- create_value_generator factory ---
 
+
 def test_create_value_generator_fixed():
     vg = create_value_generator({"type": "Fixed", "value": 999})
     assert isinstance(vg, FixedValue)
@@ -97,6 +96,7 @@ def test_create_value_generator_distribution_nested():
 
 
 # --- create_event_builder factory ---
+
 
 def test_create_event_builder_full_shape():
     data = {
