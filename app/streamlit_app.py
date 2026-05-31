@@ -22,6 +22,14 @@ from app.components.library_manager import render_library_manager
 from app.components.results_dashboard import render_results_dashboard
 from app.components.scenario_overview import render_scenario_overview
 from app.components.template_gallery import render_template_gallery
+
+# Soft import for the rich interactive results visualization module (requires pandas + plotly)
+try:
+    from app.components.simulation_viz import render_simulation_analysis
+    HAS_SIM_VIZ = True
+except Exception:
+    HAS_SIM_VIZ = False
+    render_simulation_analysis = None  # type: ignore
 from financial_simulator.monte_carlo import MonteCarloRunner
 from financial_simulator.scenarios import (
     ScenarioConfig,
@@ -321,11 +329,29 @@ elif nav == "📊 Run & Analyze":
         )
         st.stop()
 
-    # Use the new rich results dashboard
+    # Use the Phase 5 rich results dashboard as the primary results view (from advanced builder work)
     render_results_dashboard(
         results,
         scenario_name=st.session_state.get("scenario_name", "Custom Scenario"),
     )
+
+    # Additionally surface the deep interactive analysis tools (from the visualization work)
+    # This preserves powerful capabilities from both sides: individual sim selection, time scrubber +
+    # value highlighting, custom plots, reactive filtering, etc.
+    st.divider()
+    with st.expander("🔬 Deep Interactive Path Analysis (selection, time scrubber, custom plots)", expanded=False):
+        if HAS_SIM_VIZ and render_simulation_analysis is not None:
+            render_simulation_analysis(
+                results,
+                key_prefix="analyze",
+                default_metric="cumulative_cash" if any("cumulative_cash" in r.final_state for r in results) else None,
+                height=480,
+            )
+        else:
+            st.info(
+                "Install `pandas` and `plotly` to enable the full deep interactive analysis tools "
+                "(individual simulation selection, time-based highlighting, custom plot builder, etc.)."
+            )
 
 # =============================================================================
 # MODE: DISTRIBUTION LIBRARY
@@ -334,7 +360,7 @@ elif nav == "🎲 Distribution Library":
     st.header("🎲 Distribution Library")
     st.markdown("Create, visualize, and save reusable distributions with live Plotly previews.")
 
-    # Quick preset gallery
+    # Quick preset gallery (from advanced Phase 5 work)
     with st.expander("Quick Financial Presets", expanded=False):
         chosen = render_distribution_gallery(key_prefix="global_gallery")
         if chosen:
@@ -364,7 +390,7 @@ elif nav == "🎲 Distribution Library":
         )
 
 # =============================================================================
-# MODE: MY SCENARIOS + DISTRIBUTION LIBRARY (now powered by real persistence)
+# MODE: MY SCENARIOS (now powered by real persistence from Phase 5)
 # =============================================================================
 else:
     render_library_manager(key_prefix="global_library")
@@ -373,5 +399,5 @@ else:
 # Footer
 # =============================================================================
 st.caption(
-    "Financial Simulator • Scenario Builder foundation (Phases 1-4 complete) • Streamlit + Plotly + Pydantic"
+    "Financial Simulator • Scenario Builder (Phase 5) + Rich Monte Carlo Visualization • Streamlit + Plotly + Pydantic"
 )
