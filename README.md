@@ -40,7 +40,7 @@ print(result.final_state)
 ### Web Interface (Streamlit) — Now with Interactive Scenario Builder
 
 ```bash
-pip install -e ".[dev]"   # or pip install streamlit plotly pandas pyyaml
+pip install -e .
 streamlit run app/streamlit_app.py
 ```
 

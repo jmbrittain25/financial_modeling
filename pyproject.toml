@@ -27,28 +27,27 @@ classifiers = [
 ]
 
 dependencies = [
+    # Core runtime
     "numpy>=1.24",
     "pydantic>=2.0",
     "pyyaml>=6.0",
     "typer[all]>=0.9",
-]
 
-[project.optional-dependencies]
-dev = [
+    # App / UI (Streamlit scenario builder)
+    "streamlit>=1.32",
+    "plotly>=5.20",
+    "pandas>=2.0",
+
+    # API (FastAPI)
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.29",
+
+    # Development / testing tools (included so `pip install -e .` gives you everything)
     "pytest>=8.0",
     "pytest-cov>=5.0",
     "hypothesis>=6.100",
     "ruff>=0.4",
     "mypy>=1.10",
-]
-api = [
-    "fastapi>=0.110",
-    "uvicorn[standard]>=0.29",
-]
-app = [
-    "streamlit>=1.32",
-    "plotly>=5.20",
-    "pandas>=2.0",
 ]
 
 [project.scripts]

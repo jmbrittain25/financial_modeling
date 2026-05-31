@@ -184,10 +184,10 @@ def test_all_distributions_are_reproducible(dist_cls, kwargs):
     n=st.integers(10, 500),
 )
 def test_normal_samples_within_reasonable_bounds(mean, std, n):
+    """Property test: Normal samples should almost always fall in mean ± 6σ."""
     dist = NormalDistribution(mean=mean, std=std)
     rng = np.random.default_rng(12345)
     samples = [dist.sample(rng) for _ in range(n)]
-    # Almost all samples should be within mean ± 6*std (very conservative)
     lo, hi = mean - 6 * std, mean + 6 * std
     assert all(lo <= s <= hi for s in samples)
 
@@ -195,6 +195,7 @@ def test_normal_samples_within_reasonable_bounds(mean, std, n):
 @settings(max_examples=100)
 @given(low=floats(-1e5, 1e5), width=floats(1e-9, 1e5))
 def test_uniform_respects_bounds(low, width):
+    """Property test: Uniform samples must respect the declared [low, high] bounds."""
     high = low + width
     dist = UniformDistribution(low=low, high=high)
     rng = np.random.default_rng(42)
@@ -205,6 +206,7 @@ def test_uniform_respects_bounds(low, width):
 @settings(max_examples=50)
 @given(alpha=floats(0.01, 50), beta=floats(0.01, 50))
 def test_beta_always_in_unit_interval(alpha, beta):
+    """Property test: Beta samples must always be in [0, 1]."""
     dist = BetaDistribution(alpha=alpha, beta=beta)
     rng = np.random.default_rng(99)
     samples = [dist.sample(rng) for _ in range(30)]
