@@ -13,6 +13,9 @@ from typing import Any, Dict, List, Optional
 
 from .models import ScenarioConfig, DistributionLibrary, SavedDistribution
 
+# Default location for committed templates (relative to this file or repo root)
+TEMPLATES_DIR = Path(__file__).parent.parent.parent.parent / "app" / "data" / "templates"
+
 
 def scenario_to_json(cfg: ScenarioConfig, indent: int = 2) -> str:
     return cfg.to_json(indent=indent)
@@ -44,6 +47,25 @@ def save_distribution_library(lib: DistributionLibrary, path: Path) -> None:
     path.write_text(json.dumps(lib.to_dict(), indent=2), encoding="utf-8")
 
 
+# -----------------------------------------------------------------------------
+# Template helpers (Phase 3+)
+# -----------------------------------------------------------------------------
+
+def list_templates() -> List[str]:
+    """Return names of all committed scenario templates (without .json)."""
+    if not TEMPLATES_DIR.exists():
+        return []
+    return sorted([p.stem for p in TEMPLATES_DIR.glob("*.json")])
+
+
+def load_template(name: str) -> ScenarioConfig:
+    """Load a committed template by short name (e.g. 'variable_rate_mortgage')."""
+    path = TEMPLATES_DIR / f"{name}.json"
+    if not path.exists():
+        raise FileNotFoundError(f"Template not found: {name} (looked in {TEMPLATES_DIR})")
+    return load_scenario(path)
+
+
 __all__ = [
     "scenario_to_json",
     "scenario_from_json",
@@ -51,4 +73,7 @@ __all__ = [
     "save_scenario",
     "load_distribution_library",
     "save_distribution_library",
+    "list_templates",
+    "load_template",
+    "TEMPLATES_DIR",
 ]

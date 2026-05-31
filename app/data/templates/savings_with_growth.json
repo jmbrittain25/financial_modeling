@@ -1,0 +1,32 @@
+{
+  "version": "1.0",
+  "name": "5-Year Savings with Growth",
+  "description": "Simple recurring savings.",
+  "tags": [
+    "savings"
+  ],
+  "is_template": true,
+  "start": "2026-01-01T00:00:00",
+  "end": "2031-01-01T00:00:00",
+  "initial_state": {
+    "savings": 0.0
+  },
+  "event_builders": [
+    {
+      "metadata": {
+        "type": "savings"
+      },
+      "timing": {
+        "type": "Interval",
+        "interval": "P30D"
+      },
+      "value_gen": {
+        "type": "Fixed",
+        "value": -850.0
+      }
+    }
+  ],
+  "continuous_processes": [],
+  "external_drivers": [],
+  "custom_metrics": []
+}

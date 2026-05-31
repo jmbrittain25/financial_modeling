@@ -33,7 +33,6 @@ from ..core.event import (
     create_event_builder,
 )
 from ..core.simulation import (
-    ContinuousProcess,
     AnyContinuousProcess,
     SimulationEngine,
     SimulationResult,
@@ -209,7 +208,7 @@ class ScenarioConfig(BaseModel):
 
     # Core simulation declarative content (reuse battle-tested core models)
     event_builders: List[ComposedEventBuilder] = Field(default_factory=list)
-    continuous_processes: List[ContinuousProcess] = Field(default_factory=list)
+    continuous_processes: List[AnyContinuousProcess] = Field(default_factory=list)
 
     # New scenario-builder power features
     external_drivers: List[AnyExternalDriver] = Field(default_factory=list)

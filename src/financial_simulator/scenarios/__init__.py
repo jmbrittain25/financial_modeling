@@ -35,6 +35,9 @@ from .persistence import (
     save_scenario,
     load_distribution_library,
     save_distribution_library,
+    list_templates,
+    load_template,
+    TEMPLATES_DIR,
 )
 
 __all__ = [
@@ -55,6 +58,9 @@ __all__ = [
     "save_scenario",
     "load_distribution_library",
     "save_distribution_library",
+    "list_templates",
+    "load_template",
+    "TEMPLATES_DIR",
 ]
 
 __version__ = "1.0.0"  # scenario builder foundation

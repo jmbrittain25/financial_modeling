@@ -1,0 +1,62 @@
+{
+  "version": "1.0",
+  "name": "Variable-Rate 15yr Mortgage Stress Test",
+  "description": "External stochastic driver (quarterly Normal rate resets) feeding a VariableRateLoanValue.",
+  "tags": [
+    "mortgage",
+    "interest-rate-risk",
+    "driver",
+    "template"
+  ],
+  "is_template": true,
+  "start": "2026-04-01T00:00:00",
+  "end": "2041-04-01T00:00:00",
+  "initial_state": {
+    "home_value": 520000.0,
+    "mortgage_rate": 0.065,
+    "cumulative_cash": 0.0
+  },
+  "event_builders": [
+    {
+      "metadata": {
+        "type": "mortgage_payment"
+      },
+      "timing": {
+        "type": "Interval",
+        "interval": "P30D"
+      },
+      "value_gen": {
+        "type": "VariableRateLoan",
+        "principal": 420000.0,
+        "initial_rate": 0.065,
+        "term_months": 180,
+        "rate_key": "mortgage_rate"
+      }
+    }
+  ],
+  "continuous_processes": [
+    {
+      "type": "appreciation",
+      "rate": 0.035,
+      "var": "home_value"
+    }
+  ],
+  "external_drivers": [
+    {
+      "type": "discrete_rate",
+      "name": "mortgage_rate_driver",
+      "target_state_key": "mortgage_rate",
+      "dist": {
+        "type": "normal",
+        "mean": 0.065,
+        "std": 0.012
+      },
+      "timing": {
+        "type": "Interval",
+        "interval": "P90D"
+      },
+      "metadata": {}
+    }
+  ],
+  "custom_metrics": []
+}

@@ -1,0 +1,49 @@
+{
+  "version": "1.0",
+  "name": "Retirement 30-Year Plan",
+  "description": "Classic 30-year retirement with monthly contributions and portfolio growth. Includes custom metrics.",
+  "tags": [
+    "retirement",
+    "template"
+  ],
+  "is_template": true,
+  "start": "2026-01-01T00:00:00",
+  "end": "2056-01-01T00:00:00",
+  "initial_state": {
+    "portfolio_value": 450000.0,
+    "cumulative_cash": 0.0
+  },
+  "event_builders": [
+    {
+      "metadata": {
+        "type": "retirement_contribution"
+      },
+      "timing": {
+        "type": "Interval",
+        "interval": "P30D"
+      },
+      "value_gen": {
+        "type": "Fixed",
+        "value": -2500.0
+      }
+    }
+  ],
+  "continuous_processes": [
+    {
+      "type": "appreciation",
+      "rate": 0.065,
+      "var": "portfolio_value"
+    }
+  ],
+  "external_drivers": [],
+  "custom_metrics": [
+    {
+      "name": "final_portfolio",
+      "description": "",
+      "metric_type": "final_state_value",
+      "params": {
+        "key": "portfolio_value"
+      }
+    }
+  ]
+}
