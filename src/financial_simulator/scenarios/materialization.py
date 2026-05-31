@@ -10,13 +10,23 @@ from __future__ import annotations
 
 from ..core import (
     ComposedEventBuilder,
+    GBMContinuousProcess,
+    GeometricBrownianMotion,
+    MeanRevertingContinuousProcess,
+    MeanRevertingProcess,
     RateChangeValue,
     SimulationEngine,
     SimulationResult,
 )
 from ..monte_carlo.runner import MonteCarloRunner
 from .metrics import compute_all_metrics
-from .models import ConstantDriver, DiscreteRateDriver, ScenarioConfig
+from .models import (
+    ConstantDriver,
+    ContinuousGBMDriver,
+    ContinuousMeanRevertDriver,
+    DiscreteRateDriver,
+    ScenarioConfig,
+)
 
 
 def build_engine(
@@ -62,15 +72,34 @@ def build_engine(
             # Also ensure it is present at t=start even if user overrode
             eng.initial_state.setdefault(driver.target_state_key, driver.value)
 
-        elif hasattr(driver, "type") and driver.type in (
-            "gbm_continuous",
-            "mean_revert_continuous",
-        ):
-            # Phase 5+ external stochastic drivers (separate from engine continuous_processes).
-            # These will eventually create GBMContinuousProcess / MeanRevertingContinuousProcess
-            # instances (or dedicated driver wrappers) and wire them as external inputs.
-            # For now: gracefully ignored (UI + templates gate them).
-            pass
+        elif isinstance(driver, ContinuousGBMDriver):
+            # Wire as a true continuous process (smooth stochastic evolution)
+            proc = GBMContinuousProcess(
+                process=GeometricBrownianMotion(
+                    drift=driver.drift, volatility=driver.volatility
+                ),
+                var=driver.target_state_key,
+                name=driver.name or f"external:{driver.target_state_key}",
+            )
+            # Seed the initial value if the key is absent (non-destructive)
+            eng.initial_state.setdefault(driver.target_state_key, driver.initial_value)
+            # Mark the driver object itself (harmless and useful for introspection)
+            driver.metadata.setdefault("is_external_driver", True)
+            eng.add_continuous_process(proc)
+
+        elif isinstance(driver, ContinuousMeanRevertDriver):
+            proc = MeanRevertingContinuousProcess(
+                process=MeanRevertingProcess(
+                    long_term_mean=driver.long_term_mean,
+                    speed=driver.speed,
+                    volatility=driver.volatility,
+                ),
+                var=driver.target_state_key,
+                name=driver.name or f"external:{driver.target_state_key}",
+            )
+            eng.initial_state.setdefault(driver.target_state_key, driver.initial_value)
+            driver.metadata.setdefault("is_external_driver", True)
+            eng.add_continuous_process(proc)
 
     return eng
 

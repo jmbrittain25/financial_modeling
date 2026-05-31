@@ -8,11 +8,12 @@ Build the most capable open-source platform for **stochastic financial modeling*
 
 - Solid discrete-event `SimulationEngine` with extensible `Event` / `ValueGenerator` system
 - Growing library of distributions and stochastic processes (GBM, Mean Reversion, etc.)
+- **External Drivers** as first-class objects (discrete sampling, constant, GBM, mean-reverting) with live UI editor and path sampling
 - Basic Monte Carlo runner
 - Risk analytics foundation (VaR, CVaR, Sharpe, Sortino, etc.)
 - FastAPI backend (early)
-- Streamlit prototype interface
-- Clean Pydantic domain models
+- Streamlit prototype interface with full interactive Scenario Builder
+- Clean Pydantic domain models with strong serialization
 
 ## Near-term Priorities
 

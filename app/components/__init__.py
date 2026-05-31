@@ -13,6 +13,7 @@ Key components:
 from __future__ import annotations
 
 from .distribution_viz import render_distribution_picker
+from .driver_viz import render_external_driver_editor
 
 # Heavy visualization helpers (Plotly + pandas) are optional at import time so that
 # tests and minimal environments that only need the distribution picker continue to work.
@@ -37,6 +38,7 @@ except Exception:  # pandas/plotly not installed or other import failure
 
 __all__ = [
     "render_distribution_picker",
+    "render_external_driver_editor",
 ]
 
 if _HAS_SIM_VIZ:

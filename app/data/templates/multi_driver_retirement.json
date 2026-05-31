@@ -1,0 +1,68 @@
+{
+  "version": "1.0",
+  "name": "Retirement with External Drivers (Interest + Inflation + Markets)",
+  "description": "Demonstrates three external drivers acting simultaneously: mean-reverting interest rates (for any variable loans), inflation path (for expense growth), and GBM equity market returns (portfolio evolution).",
+  "tags": ["retirement", "drivers", "inflation", "interest-rate", "market", "template"],
+  "is_template": true,
+  "start": "2026-01-01T00:00:00",
+  "end": "2056-01-01T00:00:00",
+  "initial_state": {
+    "portfolio_value": 850000.0,
+    "mortgage_rate": 0.055,
+    "inflation_index": 1.0,
+    "cumulative_cash": 0.0
+  },
+  "event_builders": [
+    {
+      "name": "annual_withdrawal",
+      "metadata": {"type": "withdrawal"},
+      "timing": {"type": "Interval", "interval": "P365D"},
+      "value_gen": {"type": "Fixed", "value": -45000.0}
+    }
+  ],
+  "continuous_processes": [
+    {
+      "type": "appreciation",
+      "rate": 0.02,
+      "var": "portfolio_value"
+    }
+  ],
+  "external_drivers": [
+    {
+      "type": "mean_revert_continuous",
+      "name": "interest_rate_driver",
+      "target_state_key": "mortgage_rate",
+      "long_term_mean": 0.045,
+      "speed": 1.1,
+      "volatility": 0.007,
+      "initial_value": 0.055,
+      "metadata": {"example": "interest_rate"}
+    },
+    {
+      "type": "mean_revert_continuous",
+      "name": "inflation_driver",
+      "target_state_key": "inflation_index",
+      "long_term_mean": 0.022,
+      "speed": 0.5,
+      "volatility": 0.004,
+      "initial_value": 1.0,
+      "metadata": {"example": "inflation"}
+    },
+    {
+      "type": "gbm_continuous",
+      "name": "equity_market_driver",
+      "target_state_key": "portfolio_value",
+      "drift": 0.07,
+      "volatility": 0.16,
+      "initial_value": 850000.0,
+      "metadata": {"example": "stock_market"}
+    }
+  ],
+  "custom_metrics": [
+    {
+      "name": "final_portfolio",
+      "metric_type": "final_state_value",
+      "params": {"key": "portfolio_value"}
+    }
+  ]
+}
