@@ -9,7 +9,7 @@ from financial_simulator.core import (
     IntervalTiming,
     FixedValue,
     DistributionValue,
-    BetaDistribution,
+    TriangularDistribution,
 )
 
 
@@ -29,17 +29,17 @@ def create_business_engine(seed: int = None) -> SimulationEngine:
     engine.add_event_builder(
         ComposedEventBuilder(
             timing=IntervalTiming(interval=timedelta(days=30)),
-            value_gen=FixedValue(28_000),
+            value_gen=FixedValue(value=28_000),
             metadata={"type": "revenue"},
         )
     )
 
-    # Variable operating expenses (modeled with Beta for realism)
+    # Variable operating expenses (realistic monthly range with variation)
     engine.add_event_builder(
         ComposedEventBuilder(
             timing=IntervalTiming(interval=timedelta(days=30)),
             value_gen=DistributionValue(
-                dist=BetaDistribution(alpha=2, beta=5)  # skewed toward lower expenses
+                dist=TriangularDistribution(low=-31000, mode=-26000, high=-22000)
             ),
             metadata={"type": "opex"},
         )

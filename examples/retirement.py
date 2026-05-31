@@ -32,7 +32,7 @@ def create_retirement_engine(seed: int = None) -> SimulationEngine:
     engine.add_event_builder(
         ComposedEventBuilder(
             timing=IntervalTiming(interval=timedelta(days=30)),
-            value_gen=FixedValue(-2500.0),
+            value_gen=FixedValue(value=-2500.0),
             metadata={"type": "contribution"},
         )
     )

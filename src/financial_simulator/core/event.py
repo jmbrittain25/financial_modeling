@@ -270,10 +270,18 @@ class ValueGenerator(BaseModel, ABC):
 
 
 class FixedValue(ValueGenerator):
-    """Always emits the same constant cash value."""
+    """Always emits the same constant cash value.
+
+    Can be constructed as FixedValue(1234) or FixedValue(value=1234) for convenience.
+    """
 
     type: Literal["Fixed"] = "Fixed"
     value: float
+
+    def __init__(self, value: float = None, **data):
+        if value is not None and "value" not in data:
+            data["value"] = value
+        super().__init__(**data)
 
     def reset(self, rng: Optional[np.random.Generator] = None) -> None:
         pass
