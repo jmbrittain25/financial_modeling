@@ -1,7 +1,7 @@
 numpy
 pandas
-matplotlib
-datetime
 scipy
-flask
-requests
+pydantic
+typer
+plotly
+pyyaml

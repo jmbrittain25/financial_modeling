@@ -1,0 +1,25 @@
+[project]
+name = "financial-simulator"
+version = "0.1.0"
+description = "Modular financial simulation platform for decision support"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "numpy>=2.0",
+    "pandas>=2.2",
+    "scipy>=1.14",
+    "pydantic>=2.8",
+    "typer>=0.12",
+    "plotly>=5.22",
+    "pyyaml>=6.0",
+]
+
+[project.scripts]
+simulate = "financial_simulator.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/financial_simulator"]

@@ -1,0 +1,61 @@
+# Minimal working config for the new SimulationEngine CLI
+name: "Simple Rental + Expense Example"
+start: "2026-01-01T00:00:00"
+end: "2027-01-01T00:00:00"
+
+initial_state:
+  cumulative_cash: 0.0
+  property_value: 350000.0
+
+continuous_processes:
+  - type: Appreciation
+    rate: 0.035
+    var: property_value
+
+builders:
+  # One-time capital injection
+  - name: initial_capital
+    timing:
+      type: OneTime
+      time: "2026-01-01T00:00:00"
+    value_gen:
+      type: Fixed
+      value: 25000.0
+    metadata:
+      category: capital_in
+
+  # Monthly rent income (growing)
+  - name: rent_income
+    timing:
+      type: Interval
+      interval_days: 30
+      start_time: "2026-02-01T00:00:00"
+    value_gen:
+      type: Growing
+      initial: 2200.0
+      growth_rate: 0.025
+    metadata:
+      category: rent
+
+  # Monthly operating expenses
+  - name: operating_expenses
+    timing:
+      type: Interval
+      interval_days: 30
+      start_time: "2026-01-15T00:00:00"
+    value_gen:
+      type: Fixed
+      value: -850.0
+    metadata:
+      category: opex
+
+  # One-time repair
+  - name: unexpected_repair
+    timing:
+      type: OneTime
+      time: "2026-07-15T00:00:00"
+    value_gen:
+      type: Fixed
+      value: -4500.0
+    metadata:
+      category: maintenance
