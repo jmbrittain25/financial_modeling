@@ -1,2 +1,0 @@
-[console_scripts]
-simulate = financial_simulator.cli:main

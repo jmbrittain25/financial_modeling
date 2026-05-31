@@ -3,3 +3,18 @@
 /output/
 .DS_Store
 /_archive/
+# Python build / test artifacts
+.coverage
+.coverage.*
+htmlcov/
+*.egg-info/
+.eggs/
+dist/
+build/
+.pytest_cache/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Editable installs
+src/financial_simulator.egg-info/
