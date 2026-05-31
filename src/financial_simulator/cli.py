@@ -19,10 +19,11 @@ from __future__ import annotations
 import datetime as dt
 import json
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, Union
 
 import typer
 import yaml
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from .core import (
     AppreciationProcess,
@@ -30,6 +31,25 @@ from .core import (
     SimulationResult,
     create_event_builder,
 )
+
+
+class SimulationConfig(BaseModel):
+    """Lightweight Pydantic model for validating CLI config shape before engine construction.
+
+    Accepts the inner simulation dict (or top-level equivalent). Extra fields are allowed
+    for forward compatibility.
+    """
+
+    name: str = "cli-simulation"
+    start: Union[str, dt.datetime]
+    end: Union[str, dt.datetime]
+    initial_state: dict[str, Any] = Field(default_factory=dict)
+    builders: list[dict[str, Any]] = Field(default_factory=list)
+    continuous_processes: list[dict[str, Any]] = Field(default_factory=list)
+    seed: Optional[int] = None
+
+    model_config = ConfigDict(extra="allow")
+
 
 app = typer.Typer(
     name="simulate",
@@ -153,14 +173,29 @@ def run(
 
     try:
         cfg = load_config(config)
+    except (json.JSONDecodeError, yaml.YAMLError) as exc:
+        typer.secho(f"Error: Failed to parse config file {config} (invalid JSON/YAML)", fg=typer.colors.RED, err=True)
+        typer.echo(f"  Details: {exc}")
+        raise typer.Exit(1) from exc
     except Exception as exc:
-        typer.secho(f"Failed to load config: {exc}", fg=typer.colors.RED, err=True)
+        typer.secho(f"Error: Failed to load config file {config}: {exc}", fg=typer.colors.RED, err=True)
+        raise typer.Exit(1) from exc
+
+    # Pydantic validation of config shape (before touching build_engine)
+    try:
+        sim = cfg.get("simulation", cfg)
+        SimulationConfig.model_validate(sim)
+    except ValidationError as exc:
+        typer.secho("Error: Invalid simulation config", fg=typer.colors.RED, err=True)
+        for error in exc.errors():
+            loc = ".".join(str(x) for x in error["loc"])
+            typer.echo(f"  - {loc}: {error['msg']}")
         raise typer.Exit(1) from exc
 
     try:
         engine = build_engine(cfg, seed=seed)
     except Exception as exc:
-        typer.secho(f"Failed to build SimulationEngine: {exc}", fg=typer.colors.RED, err=True)
+        typer.secho(f"Error: Failed to build SimulationEngine (after config validation): {exc}", fg=typer.colors.RED, err=True)
         raise typer.Exit(1) from exc
 
     if verbose:
@@ -168,7 +203,8 @@ def run(
         typer.echo(f"Period: {engine.start} → {engine.end}")
         typer.echo(f"Builders: {len(engine.event_builders)}")
         typer.echo(f"Continuous processes: {len(engine.continuous_processes)}")
-        typer.echo(f"Seed: {engine.seed}")
+        seed_source = " (from --seed)" if seed is not None else ""
+        typer.echo(f"Seed: {engine.seed}{seed_source}")
 
     if dry_run:
         typer.secho("Dry run complete (no simulation executed).", fg=typer.colors.YELLOW)
@@ -178,17 +214,17 @@ def run(
     engine.run()
     result: SimulationResult = engine.get_result()
 
-    # Concise but useful summary
-    final_cash = result.final_state.get("cumulative_cash")
-    final_prop = result.final_state.get("property_value")
-    summary = [
-        f"Completed: {len(result.events)} events",
-        f"Final state keys: {list(result.final_state.keys())}",
-    ]
-    if final_cash is not None:
-        summary.append(f"cumulative_cash: {final_cash:.2f}")
-    if final_prop is not None:
-        summary.append(f"property_value: {final_prop:.2f}")
+    # Robust summary - no assumptions about specific keys in final_state
+    summary = [f"Completed: {len(result.events)} events"]
+    if result.final_state:
+        summary.append("Final state:")
+        for k, v in sorted(result.final_state.items()):
+            if isinstance(v, float):
+                summary.append(f"  {k}: {v:.2f}")
+            else:
+                summary.append(f"  {k}: {v}")
+    else:
+        summary.append("Final state: (empty)")
 
     typer.echo("\n".join(summary))
 
