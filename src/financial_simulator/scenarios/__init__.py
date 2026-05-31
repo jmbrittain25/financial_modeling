@@ -8,9 +8,9 @@ template library, saved user artifacts, and future AI-agent consumption.
 
 Key exports:
 - ScenarioConfig: the primary serializable "scenario" document
-- SavedDistribution + DistributionLibrary: user-defined reusable distributions
+- SavedDistribution + DistributionLibrary + ScenarioLibrary: user-defined reusable distributions and scenarios
 - CustomMetric + compute helpers
-- External driver types (DiscreteRateDriver, etc.)
+- External driver types (DiscreteRateDriver, ConstantDriver, Continuous*Driver, AnyExternalDriver)
 - Materialization functions (build_engine, run_single, run_monte_carlo)
 
 All models use the core discriminated unions and round-trip cleanly to JSON.
@@ -22,20 +22,32 @@ from .materialization import build_engine, run_monte_carlo, run_single
 from .metrics import compute_all_metrics, compute_metric
 from .models import (
     AnyExternalDriver,
+    ConstantDriver,
+    ContinuousGBMDriver,
+    ContinuousMeanRevertDriver,
     CustomMetric,
     DiscreteRateDriver,
     DistributionLibrary,
     SavedDistribution,
     ScenarioConfig,
+    ScenarioLibrary,
 )
 from .persistence import (
     TEMPLATES_DIR,
+    ensure_user_dirs,
+    get_user_data_dir,
     list_templates,
+    list_user_scenarios,
     load_distribution_library,
     load_scenario,
     load_template,
+    load_user_distribution_library,
+    load_user_scenario,
+    load_user_scenario_library,
     save_distribution_library,
     save_scenario,
+    save_user_distribution_library,
+    save_user_scenario,
     scenario_from_json,
     scenario_to_json,
 )
@@ -43,8 +55,12 @@ from .persistence import (
 __all__ = [
     "SavedDistribution",
     "DistributionLibrary",
+    "ScenarioLibrary",
     "CustomMetric",
     "DiscreteRateDriver",
+    "ConstantDriver",
+    "ContinuousGBMDriver",
+    "ContinuousMeanRevertDriver",
     "AnyExternalDriver",
     "ScenarioConfig",
     "compute_metric",
@@ -61,6 +77,15 @@ __all__ = [
     "list_templates",
     "load_template",
     "TEMPLATES_DIR",
+    # User persistence
+    "get_user_data_dir",
+    "ensure_user_dirs",
+    "load_user_distribution_library",
+    "save_user_distribution_library",
+    "load_user_scenario_library",
+    "save_user_scenario",
+    "list_user_scenarios",
+    "load_user_scenario",
 ]
 
 __version__ = "1.0.0"  # scenario builder foundation

@@ -19,8 +19,8 @@ Build the most capable open-source platform for **stochastic financial modeling*
 - Full support for complex YAML/JSON scenario definitions with composable modules
 - More sophisticated loan, tax, and investment modeling primitives
 - Production-grade Monte Carlo engine with better parallelism and checkpointing
-- Rich interactive web experience (Streamlit or React)
-- Comprehensive example library (Retirement, Business, Real Estate, Tax Optimization, etc.)
+- **Rich interactive web experience (Streamlit)** — Largely complete (Phase 5). Powerful visual Scenario Builder, live distribution editor, custom metrics, external drivers, fan-chart results, template gallery, and persistent personal libraries are now available.
+- Comprehensive example library (Retirement, Business, Real Estate, Tax Optimization, Portfolio) — 5 high-quality templates now included.
 
 ## Medium-term (AI Agent Focus)
 

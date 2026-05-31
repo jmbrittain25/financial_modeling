@@ -48,5 +48,22 @@
   ],
   "continuous_processes": [],
   "external_drivers": [],
-  "custom_metrics": []
+  "custom_metrics": [
+    {
+      "name": "final_cash",
+      "description": "Cash position at end of 3-year period",
+      "metric_type": "final_state_value",
+      "params": {"key": "cash"},
+      "display_format": "currency",
+      "higher_is_better": true
+    },
+    {
+      "name": "total_opex",
+      "description": "Sum of all operating expenses (negative events of type opex)",
+      "metric_type": "sum_positive_events",
+      "params": {"metadata_type": "opex"},
+      "display_format": "currency",
+      "higher_is_better": false
+    }
+  ]
 }

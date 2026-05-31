@@ -1,0 +1,104 @@
+{
+  "version": "1.0",
+  "name": "Tax-Efficient Portfolio & Withdrawal",
+  "description": "Demonstrates TaxEventValue + parallel taxable vs tax-advantaged growth buckets. Shows effective tax drag and after-tax terminal wealth with new UI metric hints.",
+  "tags": [
+    "tax",
+    "planning",
+    "withdrawal",
+    "template",
+    "advanced"
+  ],
+  "is_template": true,
+  "start": "2026-01-01T00:00:00",
+  "end": "2041-01-01T00:00:00",
+  "initial_state": {
+    "taxable_account": 180000.0,
+    "tax_advantaged": 220000.0,
+    "cumulative_cash": 0.0,
+    "tax_paid": 0.0
+  },
+  "event_builders": [
+    {
+      "name": "taxable_withdrawal",
+      "metadata": {
+        "type": "withdrawal",
+        "account": "taxable"
+      },
+      "timing": {
+        "type": "Interval",
+        "interval": "P30D"
+      },
+      "value_gen": {
+        "type": "TaxEvent",
+        "rate": 0.18,
+        "base_key": "taxable_account",
+        "tax_key": "tax_paid"
+      }
+    },
+    {
+      "name": "advantaged_withdrawal",
+      "metadata": {
+        "type": "withdrawal",
+        "account": "advantaged"
+      },
+      "timing": {
+        "type": "Interval",
+        "interval": "P30D"
+      },
+      "value_gen": {
+        "type": "Fixed",
+        "value": -4200.0
+      }
+    }
+  ],
+  "continuous_processes": [
+    {
+      "type": "appreciation",
+      "rate": 0.055,
+      "var": "taxable_account"
+    },
+    {
+      "type": "appreciation",
+      "rate": 0.07,
+      "var": "tax_advantaged"
+    }
+  ],
+  "external_drivers": [],
+  "custom_metrics": [
+    {
+      "name": "effective_tax_rate",
+      "description": "Total tax paid as percentage of total withdrawals over the horizon",
+      "metric_type": "final_state_value",
+      "params": {
+        "key": "tax_paid"
+      },
+      "display_format": "percent",
+      "higher_is_better": false,
+      "goal_value": 0.15
+    },
+    {
+      "name": "after_tax_terminal",
+      "description": "Sum of both accounts at end (proxy for after-tax wealth)",
+      "metric_type": "final_state_value",
+      "params": {
+        "key": "tax_advantaged"
+      },
+      "display_format": "currency",
+      "unit_label": "USD",
+      "higher_is_better": true,
+      "goal_value": 650000
+    },
+    {
+      "name": "total_tax_drag",
+      "description": "Cumulative tax paid over the full period",
+      "metric_type": "final_state_value",
+      "params": {
+        "key": "tax_paid"
+      },
+      "display_format": "currency",
+      "higher_is_better": false
+    }
+  ],
+  "notes": "TaxEventValue applies a flat rate to the current balance of the base_key each month. In a real model you would layer brackets via multiple TaxEvent builders or a custom ValueGenerator."
+}

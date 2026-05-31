@@ -1,20 +1,28 @@
 {
   "version": "1.0",
-  "name": "5-Year Savings with Growth",
-  "description": "Simple recurring savings.",
+  "name": "Diversified Portfolio (Stocks + Bonds + Alternatives)",
+  "description": "Multi-asset portfolio with different continuous growth processes, regular contributions, dividends, and custom risk/return metrics. Good demonstration of continuous processes + mixed event types.",
   "tags": [
-    "savings"
+    "portfolio",
+    "investing",
+    "diversification",
+    "template"
   ],
   "is_template": true,
   "start": "2026-01-01T00:00:00",
-  "end": "2031-01-01T00:00:00",
+  "end": "2036-01-01T00:00:00",
   "initial_state": {
-    "savings": 0.0
+    "stocks": 180000.0,
+    "bonds": 120000.0,
+    "alternatives": 45000.0,
+    "cumulative_cash": 0.0,
+    "dividends_received": 0.0
   },
   "event_builders": [
     {
+      "name": "monthly_contribution",
       "metadata": {
-        "type": "savings"
+        "type": "contribution"
       },
       "timing": {
         "type": "Interval",
@@ -22,11 +30,82 @@
       },
       "value_gen": {
         "type": "Fixed",
-        "value": -850.0
+        "value": -2200.0
+      }
+    },
+    {
+      "name": "quarterly_dividends",
+      "metadata": {
+        "type": "dividend"
+      },
+      "timing": {
+        "type": "Interval",
+        "interval": "P90D"
+      },
+      "value_gen": {
+        "type": "Dividend",
+        "annual_yield": 0.018,
+        "investment_value_key": "stocks"
       }
     }
   ],
-  "continuous_processes": [],
+  "continuous_processes": [
+    {
+      "type": "gbm",
+      "var": "stocks",
+      "process": {
+        "drift": 0.085,
+        "volatility": 0.18
+      }
+    },
+    {
+      "type": "appreciation",
+      "rate": 0.042,
+      "var": "bonds"
+    },
+    {
+      "type": "mean_reverting",
+      "var": "alternatives",
+      "process": {
+        "long_term_mean": 0.065,
+        "speed": 0.8,
+        "volatility": 0.12
+      }
+    }
+  ],
   "external_drivers": [],
-  "custom_metrics": []
+  "custom_metrics": [
+    {
+      "name": "final_portfolio_value",
+      "description": "Total value across all asset classes at end of horizon",
+      "metric_type": "final_state_value",
+      "params": {
+        "key": "stocks"
+      },
+      "display_format": "currency",
+      "unit_label": "USD",
+      "higher_is_better": true,
+      "goal_value": 650000
+    },
+    {
+      "name": "total_dividends_collected",
+      "description": "Cumulative dividend income received",
+      "metric_type": "final_state_value",
+      "params": {
+        "key": "dividends_received"
+      },
+      "display_format": "currency",
+      "higher_is_better": true
+    },
+    {
+      "name": "max_drawdown",
+      "description": "Worst peak-to-trough decline on cumulative cash path",
+      "metric_type": "max_drawdown_on_path",
+      "params": {
+        "state_key": "cumulative_cash"
+      },
+      "display_format": "percent",
+      "higher_is_better": false
+    }
+  ]
 }

@@ -1,8 +1,9 @@
 {
   "version": "1.0",
-  "name": "Variable-Rate 15yr Mortgage Stress Test",
-  "description": "External stochastic driver (quarterly Normal rate resets) feeding a VariableRateLoanValue.",
+  "name": "Real Estate Investment with Variable-Rate Mortgage",
+  "description": "Real Estate scenario using a stochastic external driver for interest rates, VariableRateLoanValue for payments, and home appreciation. Demonstrates interest rate risk + equity build-up with rich custom metrics.",
   "tags": [
+    "real-estate",
     "mortgage",
     "interest-rate-risk",
     "driver",
@@ -58,5 +59,38 @@
       "metadata": {}
     }
   ],
-  "custom_metrics": []
+  "custom_metrics": [
+    {
+      "name": "final_home_equity",
+      "description": "Approximate equity = home_value - remaining mortgage balance (tracked via state)",
+      "metric_type": "final_state_value",
+      "params": {
+        "key": "home_value"
+      },
+      "display_format": "currency",
+      "unit_label": "USD",
+      "higher_is_better": true,
+      "goal_value": 250000
+    },
+    {
+      "name": "total_interest_paid",
+      "description": "Cumulative interest cost over the life of the loan (via event metadata)",
+      "metric_type": "sum_positive_events",
+      "params": {
+        "metadata_type": "interest"
+      },
+      "display_format": "currency",
+      "higher_is_better": false
+    },
+    {
+      "name": "max_rate_experienced",
+      "description": "Highest mortgage rate observed during the simulation (via driver)",
+      "metric_type": "final_state_value",
+      "params": {
+        "key": "mortgage_rate"
+      },
+      "display_format": "percent",
+      "higher_is_better": false
+    }
+  ]
 }

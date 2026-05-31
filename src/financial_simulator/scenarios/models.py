@@ -40,7 +40,11 @@ from ..core.simulation import (
 
 
 class SavedDistribution(BaseModel):
-    """A named, reusable distribution that users can save in their personal library."""
+    """A named, reusable distribution that users can save in their personal library.
+
+    Extra UI fields (units, domain_hint, last_used) are optional and used only by
+    the interactive scenario builder / library browser for better filtering and display.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
@@ -49,6 +53,11 @@ class SavedDistribution(BaseModel):
     description: str = ""
     dist: AnyDistribution
     tags: list[str] = Field(default_factory=list)
+    units: str | None = Field(default=None, description="E.g. 'USD', '%', 'rate'")
+    domain_hint: Literal["absolute", "rate", "fraction", "time"] | None = Field(
+        default=None, description="Helps UI pick sensible defaults and validation"
+    )
+    last_used: dt.datetime | None = None
     created_at: dt.datetime = Field(default_factory=lambda: dt.datetime.now(dt.timezone.utc))
 
 
@@ -89,13 +98,57 @@ class DistributionLibrary(BaseModel):
         return cls.model_validate(data)
 
 
+class ScenarioLibrary(BaseModel):
+    """Collection of user-saved ScenarioConfig documents.
+
+    Symmetric to DistributionLibrary. Used by the 'My Scenarios' browser and
+    persistence layer for disk-backed personal libraries.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    scenarios: list[ScenarioConfig] = Field(default_factory=list)
+
+    def add(self, scenario: ScenarioConfig) -> None:
+        # Use name as natural key for simplicity (user can rename to avoid collisions)
+        if any(s.name == scenario.name for s in self.scenarios):
+            raise ValueError(f"Scenario named '{scenario.name}' already exists in library")
+        self.scenarios.append(scenario)
+
+    def remove(self, name: str) -> bool:
+        before = len(self.scenarios)
+        self.scenarios = [s for s in self.scenarios if s.name != name]
+        return len(self.scenarios) < before
+
+    def get(self, name: str) -> ScenarioConfig | None:
+        for s in self.scenarios:
+            if s.name == name:
+                return s
+        return None
+
+    def get_by_name(self, name: str) -> ScenarioConfig | None:
+        return self.get(name)
+
+    def to_dict(self) -> dict[str, Any]:
+        return self.model_dump(mode="json")
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> ScenarioLibrary:
+        return cls.model_validate(data)
+
+
 # =============================================================================
 # Custom Metrics (user-defined quantities tracked across Monte Carlo runs)
 # =============================================================================
 
 
 class CustomMetric(BaseModel):
-    """Definition of a scalar metric computed from a completed SimulationResult."""
+    """Definition of a scalar metric computed from a completed SimulationResult.
+
+    The UI-only fields (display_format, unit_label, higher_is_better, goal_value) do not
+    affect computation in metrics.py — they only improve presentation in the Streamlit
+    results dashboard and custom metrics editor.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
@@ -109,6 +162,12 @@ class CustomMetric(BaseModel):
         "time_to_threshold",  # params: {"state_key": "...", "threshold": 0.0, "direction": "above"}
     ]
     params: dict[str, Any] = Field(default_factory=dict)
+
+    # UI / presentation hints (additive, ignored by compute_metric)
+    display_format: Literal["currency", "percent", "number", "years", "count"] = "number"
+    unit_label: str = ""
+    higher_is_better: bool | None = None
+    goal_value: float | None = None
 
 
 # =============================================================================
@@ -210,8 +269,12 @@ class ScenarioConfig(BaseModel):
 
     notes: str | None = None
 
+    # Lightweight UI-only hints (e.g. last open panel, favorite flag). Never used by
+    # materialization or the core engine — safe to ignore on load.
+    ui_hints: dict[str, Any] = Field(default_factory=dict)
+
     # ------------------------------------------------------------------
-    # Convenience constructors
+    # Convenience constructors & UI helpers
     # ------------------------------------------------------------------
 
     @classmethod
@@ -228,10 +291,53 @@ class ScenarioConfig(BaseModel):
     def from_json(cls, text: str) -> ScenarioConfig:
         return cls.model_validate_json(text)
 
+    # ------------------------------------------------------------------
+    # UI / builder helpers (pure, no side effects)
+    # ------------------------------------------------------------------
+
+    def clone(self) -> ScenarioConfig:
+        """Return a deep copy suitable for 'Save as' / duplication in the UI."""
+        return self.model_copy(deep=True)
+
+    def get_all_referenced_distributions(self) -> list[AnyDistribution]:
+        """Harvest every distribution embedded anywhere in the scenario (for library views)."""
+        dists: list[AnyDistribution] = []
+        # From event builders (DistributionValue, RateChangeValue, etc.)
+        for eb in self.event_builders:
+            vg = getattr(eb, "value_gen", None)
+            d = getattr(vg, "dist", None) if vg is not None else None
+            if d is not None:
+                dists.append(d)
+        # From external drivers (DiscreteRateDriver etc.)
+        for drv in self.external_drivers:
+            d = getattr(drv, "dist", None)
+            if d is not None:
+                dists.append(d)
+        return dists
+
+    def summary(self) -> dict[str, Any]:
+        """Compact stats for sidebar cards and gallery previews."""
+        horizon_days = (self.end - self.start).days if self.end and self.start else 0
+        return {
+            "name": self.name,
+            "horizon_years": round(horizon_days / 365.25, 1) if horizon_days > 0 else 0.0,
+            "num_event_builders": len(self.event_builders),
+            "num_continuous": len(self.continuous_processes),
+            "num_drivers": len(self.external_drivers),
+            "num_custom_metrics": len(self.custom_metrics),
+            "has_stochastic": any(
+                "Distribution" in str(type(getattr(eb.value_gen, "dist", None)))
+                or hasattr(getattr(eb.value_gen, "dist", None), "sample")
+                for eb in self.event_builders
+            ),
+            "state_keys": sorted(self.initial_state.keys()),
+        }
+
 
 __all__ = [
     "SavedDistribution",
     "DistributionLibrary",
+    "ScenarioLibrary",
     "CustomMetric",
     "DiscreteRateDriver",
     "ConstantDriver",

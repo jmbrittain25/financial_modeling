@@ -449,9 +449,46 @@ def render_distribution_picker(
     return dist
 
 
+# -----------------------------------------------------------------------------
+# Simple Preset Gallery (for Step 5 enhancement)
+# -----------------------------------------------------------------------------
+
+
+def render_distribution_gallery(key_prefix: str = "gallery") -> dict[str, AnyDistribution] | None:
+    """
+    Lightweight gallery of common financial presets.
+    Returns the selected distribution if user clicks one, otherwise None.
+    """
+    import streamlit as st
+
+    from financial_simulator.core.distributions import (
+        LogNormalDistribution,
+        NormalDistribution,
+        TriangularDistribution,
+    )
+
+    presets = {
+        "Equity Returns (moderate)": NormalDistribution(mean=0.08, std=0.16),
+        "Equity Returns (volatile)": NormalDistribution(mean=0.09, std=0.22),
+        "Inflation (moderate)": NormalDistribution(mean=0.025, std=0.012),
+        "Home Appreciation (triangular)": TriangularDistribution(low=0.01, mode=0.035, high=0.06),
+        "Large One-time Expense (lognormal)": LogNormalDistribution(mean=10.5, sigma=0.6),  # ~$36k median
+        "Interest Rate Shock (±1.5%)": NormalDistribution(mean=0.0, std=0.015),
+    }
+
+    st.markdown("**Common Financial Presets**")
+    cols = st.columns(3)
+    for i, (label, dist) in enumerate(presets.items()):
+        if cols[i % 3].button(label, key=f"{key_prefix}_{i}", use_container_width=True):
+            st.toast(f"Loaded preset: {label}")
+            return dist
+    return None
+
+
 __all__ = [
     "render_distribution_picker",
     "plot_distribution_preview",
     "get_distribution_stats",
     "DIST_TYPE_LABELS",
+    "render_distribution_gallery",
 ]

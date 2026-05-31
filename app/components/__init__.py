@@ -14,6 +14,11 @@ from __future__ import annotations
 
 from .distribution_viz import render_distribution_picker
 
+# New Phase 5 interactive scenario builder components (import only when Streamlit context exists)
+# from .timing_editor import render_timing_editor
+# from .value_generator_editor import render_value_generator_editor
+# from .event_builder_editor import render_event_builder_list_editor
+
 __all__ = [
     "render_distribution_picker",
 ]

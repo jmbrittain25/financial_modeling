@@ -37,21 +37,25 @@ result = engine.get_result()
 print(result.final_state)
 ```
 
-### Web Interface (Streamlit) — Now with Interactive Scenario Builder
+### Web Interface (Streamlit) — Full Interactive Scenario Builder
 
 ```bash
 pip install -e .
 streamlit run app/streamlit_app.py
 ```
 
-The app now includes a full **interactive scenario builder**:
-- Load from 5 rich templates (including a variable-rate mortgage with stochastic external driver)
-- Live distribution explorer with Plotly previews
-- Edit horizons, initial state, events
-- Single-run preview + full Monte Carlo from the builder
-- Custom metrics and external drivers are first-class
+The app is now a powerful **no-code decision-support tool**:
 
-See the in-app "Scenario Builder" mode for the complete experience.
+**Key Features**
+- **Interactive Scenario Builder**: Visually build complex scenarios using 8+ realistic one-click presets, full timing + value generator editors, external drivers, continuous processes, and custom metrics.
+- **Live Distribution Editor**: 7 distribution types with real-time Plotly previews + analytical PDFs.
+- **Rich Template Gallery**: 5 high-quality curated starting scenarios (Retirement, Real Estate, Business, Tax Planning, Portfolio).
+- **Scenario Overview**: Visual event schedule preview + complexity indicators before you run.
+- **Powerful Results Dashboard**: Percentile fan charts over time, custom metric analysis, risk metrics, and downloads.
+- **Personal Libraries**: Save and reload your own scenarios and custom distributions (persisted to disk).
+- **Save/Load**: Full import/export + personal library support.
+
+Everything is built on the strong declarative `ScenarioConfig` model so your work is fully serializable and runnable from code or the CLI as well.
 
 ## Architecture
 
