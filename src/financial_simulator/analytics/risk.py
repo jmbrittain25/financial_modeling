@@ -48,18 +48,25 @@ class RiskAnalyzer:
         self.risk_free_rate = risk_free_rate
 
     def compute_var(self, outcomes: np.ndarray, confidence: float = 0.95) -> float:
-        """Historical Value at Risk."""
+        """Historical Value at Risk. Returns nan for empty input."""
+        if len(outcomes) == 0:
+            return float("nan")
         return float(np.percentile(outcomes, (1 - confidence) * 100))
 
     def compute_cvar(self, outcomes: np.ndarray, confidence: float = 0.95) -> float:
-        """Conditional Value at Risk (Expected Shortfall)."""
+        """Conditional Value at Risk (Expected Shortfall). Returns nan for empty input."""
+        if len(outcomes) == 0:
+            return float("nan")
         var = self.compute_var(outcomes, confidence)
         tail = outcomes[outcomes <= var]
         return float(np.mean(tail)) if len(tail) > 0 else var
 
     def compute_sharpe(self, returns: np.ndarray) -> float:
         excess = returns - self.risk_free_rate
-        return float(np.mean(excess) / np.std(excess)) if np.std(excess) > 0 else 0.0
+        std = np.std(excess)
+        if std < 1e-12:  # treat as zero to avoid huge/inf values
+            return 0.0
+        return float(np.mean(excess) / std)
 
     def compute_sortino(self, returns: np.ndarray, target: float = 0.0) -> float:
         excess = returns - target

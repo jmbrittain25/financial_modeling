@@ -374,6 +374,12 @@ class VariableRateLoanValue(ValueGenerator):
     _month: int = PrivateAttr(default=0)
     _last_time: Optional[dt.datetime] = PrivateAttr(default=None)
 
+    def model_post_init(self, __context: Any) -> None:
+        # Ensure internal state is initialized from declarative fields on construction
+        self._balance = self.principal
+        self._month = 0
+        self._last_time = None
+
     def reset(self, rng: Optional[np.random.Generator] = None) -> None:
         self._balance = self.principal
         self._month = 0
