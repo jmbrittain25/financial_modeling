@@ -32,6 +32,7 @@ from .distributions import (
     LogNormalDistribution,
     ExponentialDistribution,
     ConstantDistribution,
+    BetaDistribution,
     AnyDistribution,
     create_distribution,
 )
@@ -49,6 +50,9 @@ from .event import (
     DistributionValue,
     RateChangeValue,
     VariableRateLoanValue,
+    DividendValue,
+    InvestmentContributionValue,
+    TaxEventValue,
     EventBuilder,
     ComposedEventBuilder,
     create_timing,
@@ -59,8 +63,23 @@ from .event import (
 from .simulation import (
     ContinuousProcess,
     AppreciationProcess,
+    GBMContinuousProcess,
+    MeanRevertingContinuousProcess,
     SimulationResult,
     SimulationEngine,
+)
+
+from .stochastic import (
+    StochasticProcess,
+    GeometricBrownianMotion,
+    MeanRevertingProcess,
+)
+
+from .financial_models import (
+    Loan,
+    TaxBracket,
+    TaxSchedule,
+    Portfolio,
 )
 
 __all__ = [
@@ -72,6 +91,7 @@ __all__ = [
     "LogNormalDistribution",
     "ExponentialDistribution",
     "ConstantDistribution",
+    "BetaDistribution",
     "AnyDistribution",
     "create_distribution",
     # event system
@@ -87,6 +107,9 @@ __all__ = [
     "DistributionValue",
     "RateChangeValue",
     "VariableRateLoanValue",
+    "DividendValue",
+    "InvestmentContributionValue",
+    "TaxEventValue",
     "EventBuilder",
     "ComposedEventBuilder",
     "create_timing",
@@ -95,8 +118,19 @@ __all__ = [
     # simulation
     "ContinuousProcess",
     "AppreciationProcess",
+    "GBMContinuousProcess",
+    "MeanRevertingContinuousProcess",
     "SimulationResult",
     "SimulationEngine",
+    # stochastic processes
+    "StochasticProcess",
+    "GeometricBrownianMotion",
+    "MeanRevertingProcess",
+    # financial domain models
+    "Loan",
+    "TaxBracket",
+    "TaxSchedule",
+    "Portfolio",
 ]
 
 __version__ = "0.2.0"  # core rewrite

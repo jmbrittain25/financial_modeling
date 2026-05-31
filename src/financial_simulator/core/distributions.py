@@ -153,6 +153,22 @@ class ConstantDistribution(Distribution):
         return float(self.value)
 
 
+class BetaDistribution(Distribution):
+    """Beta distribution (values strictly between 0 and 1).
+
+    Very useful for modeling probabilities, allocation weights,
+    or normalized financial ratios.
+    """
+
+    type: Literal["beta"] = "beta"
+    alpha: float = Field(gt=0)
+    beta: float = Field(gt=0)
+
+    def sample(self, rng: Optional[np.random.Generator] = None) -> float:
+        rng = rng or np.random.default_rng()
+        return float(rng.beta(self.alpha, self.beta))
+
+
 # -----------------------------------------------------------------------------
 # Discriminated union + adapter for polymorphic construction from dicts
 # -----------------------------------------------------------------------------
@@ -165,6 +181,7 @@ AnyDistribution = Annotated[
         LogNormalDistribution,
         ExponentialDistribution,
         ConstantDistribution,
+        BetaDistribution,
     ],
     Field(discriminator="type"),
 ]
@@ -201,6 +218,7 @@ __all__ = [
     "LogNormalDistribution",
     "ExponentialDistribution",
     "ConstantDistribution",
+    "BetaDistribution",
     "AnyDistribution",
     "create_distribution",
 ]

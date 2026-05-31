@@ -406,6 +406,65 @@ class VariableRateLoanValue(ValueGenerator):
         return -payment, extra
 
 
+class DividendValue(ValueGenerator):
+    """Models dividend or distribution income from an investment."""
+
+    type: Literal["Dividend"] = "Dividend"
+    annual_yield: float
+    investment_value_key: str = "portfolio_value"
+
+    def reset(self, rng: Optional[np.random.Generator] = None) -> None:
+        pass
+
+    def get_value(
+        self, time: dt.datetime, state: Dict[str, Any], rng: Optional[np.random.Generator] = None
+    ) -> Tuple[float, Dict[str, Any]]:
+        portfolio_value = state.get(self.investment_value_key, 0.0)
+        dividend = portfolio_value * self.annual_yield / 12  # monthly approximation
+        return dividend, {"source": "dividend"}
+
+
+class InvestmentContributionValue(ValueGenerator):
+    """Models regular contributions into an investment account."""
+
+    type: Literal["InvestmentContribution"] = "InvestmentContribution"
+    amount: float
+    growth_key: Optional[str] = None  # if set, contribution grows with this state variable
+
+    def reset(self, rng: Optional[np.random.Generator] = None) -> None:
+        pass
+
+    def get_value(
+        self, time: dt.datetime, state: Dict[str, Any], rng: Optional[np.random.Generator] = None
+    ) -> Tuple[float, Dict[str, Any]]:
+        amount = self.amount
+        if self.growth_key and self.growth_key in state:
+            amount *= state[self.growth_key]
+        return -amount, {"type": "investment_contribution"}
+
+
+class TaxEventValue(ValueGenerator):
+    """
+    Simple tax event generator.
+    Applies a tax rate to a base amount stored in state.
+    """
+
+    type: Literal["TaxEvent"] = "TaxEvent"
+    rate: float
+    base_key: str
+    tax_key: str = "tax_paid"
+
+    def reset(self, rng: Optional[np.random.Generator] = None) -> None:
+        pass
+
+    def get_value(
+        self, time: dt.datetime, state: Dict[str, Any], rng: Optional[np.random.Generator] = None
+    ) -> Tuple[float, Dict[str, Any]]:
+        base = state.get(self.base_key, 0.0)
+        tax = base * self.rate
+        return -tax, {"tax": tax, "state_update": {self.tax_key: state.get(self.tax_key, 0.0) + tax}}
+
+
 # ValueGenerator discriminated union + factory
 AnyValueGenerator = Annotated[
     Union[
@@ -414,6 +473,9 @@ AnyValueGenerator = Annotated[
         DistributionValue,
         RateChangeValue,
         VariableRateLoanValue,
+        DividendValue,
+        InvestmentContributionValue,
+        TaxEventValue,
     ],
     Field(discriminator="type"),
 ]
@@ -550,6 +612,9 @@ __all__ = [
     "DistributionValue",
     "RateChangeValue",
     "VariableRateLoanValue",
+    "DividendValue",
+    "InvestmentContributionValue",
+    "TaxEventValue",
     "EventBuilder",
     "ComposedEventBuilder",
     "create_timing",

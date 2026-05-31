@@ -29,6 +29,7 @@ import numpy as np
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
 from .event import Event, EventBuilder, ComposedEventBuilder
+from .stochastic import GeometricBrownianMotion, MeanRevertingProcess
 
 
 # =============================================================================
@@ -66,6 +67,34 @@ class AppreciationProcess(ContinuousProcess):
         years = delta.total_seconds() / (365.25 * 24 * 3600)
         if years > 0:
             state[self.var] *= (1.0 + self.rate) ** years
+
+
+class GBMContinuousProcess(ContinuousProcess):
+    """Continuous process driven by Geometric Brownian Motion."""
+
+    process: GeometricBrownianMotion
+    var: str
+
+    def advance(self, state: Dict[str, Any], delta: dt.timedelta) -> None:
+        if self.var not in state:
+            return
+        current = state[self.var]
+        new_val = self.process.step(current, delta)
+        state[self.var] = new_val
+
+
+class MeanRevertingContinuousProcess(ContinuousProcess):
+    """Continuous process driven by a mean-reverting stochastic process."""
+
+    process: MeanRevertingProcess
+    var: str
+
+    def advance(self, state: Dict[str, Any], delta: dt.timedelta) -> None:
+        if self.var not in state:
+            return
+        current = state[self.var]
+        new_val = self.process.step(current, delta)
+        state[self.var] = new_val
 
 
 # =============================================================================
