@@ -83,6 +83,14 @@ if nav == "🛠️ Scenario Builder":
     st.header("🛠️ Scenario Builder")
     st.markdown("Build, tweak, preview, save, and run complex financial simulations — no code required.")
 
+    badges = []
+    if current.external_drivers:
+        badges.append(f"🔗 {len(current.external_drivers)} external driver(s)")
+    if current.custom_metrics:
+        badges.append(f"📊 {len(current.custom_metrics)} custom metric(s)")
+    if badges:
+        st.caption(" | ".join(badges))
+
     # Template loader
     with st.expander("📥 Load from Template (recommended starting point)", expanded=True):
         templates = list_templates()
@@ -216,11 +224,22 @@ elif nav == "📊 Run & Analyze":
     fig.update_layout(title="Distribution of Final Outcomes", height=380)
     st.plotly_chart(fig, use_container_width=True)
 
-    # Custom metrics (new in Phase 5 spirit)
+    # Custom metrics (Phase 5)
     if results and "__custom_metrics__" in results[0].final_state:
-        st.subheader("Custom Metrics (from scenario)")
-        cm = results[0].final_state["__custom_metrics__"]
-        st.json(cm)
+        st.subheader("📈 Custom Metrics Defined in Scenario")
+        all_cm = [r.final_state.get("__custom_metrics__", {}) for r in results]
+        # Show averages of the custom metrics
+        if all_cm:
+            keys = list(all_cm[0].keys())
+            cols = st.columns(len(keys) or 1)
+            for i, k in enumerate(keys):
+                vals = [m.get(k, 0) for m in all_cm]
+                cols[i].metric(k, f"{sum(vals)/len(vals):,.2f}", f"avg across {len(results)} sims")
+
+    # Driver info
+    if current and current.external_drivers:
+        st.info(f"This scenario uses {len(current.external_drivers)} external driver(s): " +
+                ", ".join(d.name for d in current.external_drivers))
 
 # =============================================================================
 # MODE: DISTRIBUTION LIBRARY

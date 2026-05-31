@@ -37,12 +37,21 @@ result = engine.get_result()
 print(result.final_state)
 ```
 
-### Web Interface (Streamlit)
+### Web Interface (Streamlit) — Now with Interactive Scenario Builder
 
 ```bash
-pip install streamlit plotly pandas
+pip install -e ".[dev]"   # or pip install streamlit plotly pandas pyyaml
 streamlit run app/streamlit_app.py
 ```
+
+The app now includes a full **interactive scenario builder**:
+- Load from 5 rich templates (including a variable-rate mortgage with stochastic external driver)
+- Live distribution explorer with Plotly previews
+- Edit horizons, initial state, events
+- Single-run preview + full Monte Carlo from the builder
+- Custom metrics and external drivers are first-class
+
+See the in-app "Scenario Builder" mode for the complete experience.
 
 ## Architecture
 
