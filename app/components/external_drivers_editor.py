@@ -54,31 +54,49 @@ def render_external_drivers_editor(
 
     # Quick add
     cols = st.columns(2)
-    if cols[0].button("➕ Add Discrete Rate Driver (recommended)", key=f"{key_prefix}_add_rate", use_container_width=True):
+    if cols[0].button(
+        "➕ Add Discrete Rate Driver (recommended)",
+        key=f"{key_prefix}_add_rate",
+        use_container_width=True,
+    ):
         drivers = drivers + [get_default_discrete_rate_driver()]
         st.rerun()
-    if cols[1].button("➕ Add Constant Driver", key=f"{key_prefix}_add_const", use_container_width=True):
+    if cols[1].button(
+        "➕ Add Constant Driver", key=f"{key_prefix}_add_const", use_container_width=True
+    ):
         drivers = drivers + [get_default_constant_driver()]
         st.rerun()
 
     if not drivers:
-        st.info("No external drivers yet. Rate drivers are excellent for modeling variable mortgages, credit lines, or inflation.")
+        st.info(
+            "No external drivers yet. Rate drivers are excellent for modeling variable mortgages, credit lines, or inflation."
+        )
     else:
         to_delete = []
         for idx, drv in enumerate(drivers):
             with st.container(border=True):
                 c1, c2 = st.columns([5, 1])
                 drv_name = getattr(drv, "name", f"Driver {idx}")
-                c1.markdown(f"**{drv_name}** — `{getattr(drv, 'type', 'driver')}` → `{getattr(drv, 'target_state_key', '?')}`")
+                c1.markdown(
+                    f"**{drv_name}** — `{getattr(drv, 'type', 'driver')}` → `{getattr(drv, 'target_state_key', '?')}`"
+                )
 
                 if c2.button("🗑️", key=f"{key_prefix}_del_{idx}", use_container_width=True):
                     to_delete.append(idx)
 
                 if isinstance(drv, DiscreteRateDriver):
-                    new_name = st.text_input("Driver Name", value=drv.name, key=f"{key_prefix}_rate_name_{idx}")
-                    new_target = st.text_input("Target State Key", value=drv.target_state_key, key=f"{key_prefix}_rate_target_{idx}")
+                    new_name = st.text_input(
+                        "Driver Name", value=drv.name, key=f"{key_prefix}_rate_name_{idx}"
+                    )
+                    new_target = st.text_input(
+                        "Target State Key",
+                        value=drv.target_state_key,
+                        key=f"{key_prefix}_rate_target_{idx}",
+                    )
 
-                    st.markdown("**Rate Distribution** (this value will be written into state on the schedule below)")
+                    st.markdown(
+                        "**Rate Distribution** (this value will be written into state on the schedule below)"
+                    )
                     new_dist = render_distribution_picker(
                         key_prefix=f"{key_prefix}_rate_dist_{idx}",
                         initial=drv.dist,
@@ -86,10 +104,14 @@ def render_external_drivers_editor(
                     )
 
                     # Timing (simplified)
-                    interval_days = drv.timing.interval.days if hasattr(drv.timing, "interval") else 90
+                    interval_days = (
+                        drv.timing.interval.days if hasattr(drv.timing, "interval") else 90
+                    )
                     new_interval = st.number_input(
                         "Update every N days",
-                        min_value=1, max_value=3650, value=interval_days,
+                        min_value=1,
+                        max_value=3650,
+                        value=interval_days,
                         key=f"{key_prefix}_rate_interval_{idx}",
                     )
 
@@ -104,9 +126,17 @@ def render_external_drivers_editor(
                     )
 
                 elif isinstance(drv, ConstantDriver):
-                    new_name = st.text_input("Name", value=drv.name, key=f"{key_prefix}_const_name_{idx}")
-                    new_target = st.text_input("Target State Key", value=drv.target_state_key, key=f"{key_prefix}_const_target_{idx}")
-                    new_val = st.number_input("Constant Value", value=drv.value, key=f"{key_prefix}_const_val_{idx}")
+                    new_name = st.text_input(
+                        "Name", value=drv.name, key=f"{key_prefix}_const_name_{idx}"
+                    )
+                    new_target = st.text_input(
+                        "Target State Key",
+                        value=drv.target_state_key,
+                        key=f"{key_prefix}_const_target_{idx}",
+                    )
+                    new_val = st.number_input(
+                        "Constant Value", value=drv.value, key=f"{key_prefix}_const_val_{idx}"
+                    )
 
                     drivers[idx] = ConstantDriver(
                         name=new_name,

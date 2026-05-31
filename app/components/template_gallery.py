@@ -68,10 +68,16 @@ def render_template_gallery(
     templates = list_templates()
 
     st.markdown("### 📚 Template Gallery")
-    st.caption("High-quality starting points. Load one, then customize freely in the Scenario Builder.")
+    st.caption(
+        "High-quality starting points. Load one, then customize freely in the Scenario Builder."
+    )
 
     # Filter / search (simple for now)
-    search = st.text_input("Search templates", placeholder="retirement, real estate, tax...", key=f"{key_prefix}_search")
+    search = st.text_input(
+        "Search templates",
+        placeholder="retirement, real estate, tax...",
+        key=f"{key_prefix}_search",
+    )
 
     filtered = []
     for name in templates:
@@ -112,7 +118,12 @@ def render_template_gallery(
                 for f in features:
                     st.write(f"• {f}")
 
-            if st.button("Load into Builder", key=f"{key_prefix}_load_{name}", type="primary", use_container_width=True):
+            if st.button(
+                "Load into Builder",
+                key=f"{key_prefix}_load_{name}",
+                type="primary",
+                use_container_width=True,
+            ):
                 try:
                     cfg = load_template(name)
                     st.success(f"Loaded **{title}**")

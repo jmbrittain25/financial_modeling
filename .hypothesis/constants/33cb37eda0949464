@@ -1,0 +1,4 @@
+# file: /Users/justinbrittain/.grok/worktrees/projects-financial-modeling/advanced-ui-2/src/financial_simulator/core/simulation.py
+# hypothesis_version: 6.155.1
+
+[1.0, 365.25, 3600, 'AnyContinuousProcess', 'AppreciationProcess', 'ContinuousProcess', 'GBMContinuousProcess', 'SimulationEngine', 'SimulationResult', 'appreciation', 'continuous_processes', 'cumulative_cash', 'end', 'event_builders', 'financial-simulation', 'forbid', 'gbm', 'initial_state', 'json', 'mean_reverting', 'name', 'property_value', 'restored-simulation', 'seed', 'start', 'state_update', 'type']

@@ -21,7 +21,9 @@ from financial_simulator.analytics.risk import RiskAnalyzer
 from financial_simulator.core.simulation import SimulationResult
 
 
-def _extract_state_series(results: list[SimulationResult], key: str) -> tuple[np.ndarray, np.ndarray, list[float]]:
+def _extract_state_series(
+    results: list[SimulationResult], key: str
+) -> tuple[np.ndarray, np.ndarray, list[float]]:
     """Return (times, p10/p50/p90 matrix, list of final values) for a state key."""
     all_times: set = set()
     series_by_sim: list[dict] = []
@@ -81,19 +83,40 @@ def plot_state_bands(
     x_years = [(t - t0).days / 365.25 for t in times]
 
     # Bands
-    fig.add_trace(go.Scatter(
-        x=x_years, y=bands[2], mode="lines", line=dict(color="rgba(59,130,246,0.2)", width=0),
-        name="90th %ile", showlegend=False, hovertemplate="%{y:.0f}<extra></extra>",
-    ))
-    fig.add_trace(go.Scatter(
-        x=x_years, y=bands[0], mode="lines", line=dict(color="rgba(59,130,246,0.2)", width=0),
-        name="10th %ile", fill="tonexty", fillcolor="rgba(59,130,246,0.25)",
-        showlegend=False, hovertemplate="%{y:.0f}<extra></extra>",
-    ))
-    fig.add_trace(go.Scatter(
-        x=x_years, y=bands[1], mode="lines", line=dict(color="#1e40af", width=2.5),
-        name="Median", hovertemplate="%{y:.0f}<extra></extra>",
-    ))
+    fig.add_trace(
+        go.Scatter(
+            x=x_years,
+            y=bands[2],
+            mode="lines",
+            line=dict(color="rgba(59,130,246,0.2)", width=0),
+            name="90th %ile",
+            showlegend=False,
+            hovertemplate="%{y:.0f}<extra></extra>",
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=x_years,
+            y=bands[0],
+            mode="lines",
+            line=dict(color="rgba(59,130,246,0.2)", width=0),
+            name="10th %ile",
+            fill="tonexty",
+            fillcolor="rgba(59,130,246,0.25)",
+            showlegend=False,
+            hovertemplate="%{y:.0f}<extra></extra>",
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=x_years,
+            y=bands[1],
+            mode="lines",
+            line=dict(color="#1e40af", width=2.5),
+            name="Median",
+            hovertemplate="%{y:.0f}<extra></extra>",
+        )
+    )
 
     fig.update_layout(
         title=title or f"{state_key} — Percentile Bands (10 / 50 / 90)",
@@ -107,15 +130,19 @@ def plot_state_bands(
     return fig
 
 
-def plot_outcome_histogram(final_values: list[float], title: str = "Distribution of Final Outcomes") -> go.Figure:
+def plot_outcome_histogram(
+    final_values: list[float], title: str = "Distribution of Final Outcomes"
+) -> go.Figure:
     fig = go.Figure()
-    fig.add_trace(go.Histogram(
-        x=final_values,
-        nbinsx=40,
-        marker_color="#3b82f6",
-        opacity=0.75,
-        name="Final Value",
-    ))
+    fig.add_trace(
+        go.Histogram(
+            x=final_values,
+            nbinsx=40,
+            marker_color="#3b82f6",
+            opacity=0.75,
+            name="Final Value",
+        )
+    )
     fig.update_layout(
         title=title,
         xaxis_title="Final Value",
@@ -172,13 +199,17 @@ def render_results_dashboard(results: list[SimulationResult], scenario_name: str
         chosen_key = st.selectbox(
             "State variable to plot",
             sorted(available_keys),
-            index=0 if final_key not in available_keys else list(sorted(available_keys)).index(final_key),
+            index=0
+            if final_key not in available_keys
+            else list(sorted(available_keys)).index(final_key),
             key="band_key_selector",
         )
         fig = plot_state_bands(results, state_key=chosen_key)
         st.plotly_chart(fig, use_container_width=True)
     else:
-        st.info("No detailed state history recorded in these runs (common for very simple scenarios).")
+        st.info(
+            "No detailed state history recorded in these runs (common for very simple scenarios)."
+        )
 
     # --- 4. Custom Metrics (if present) ---
     if results and "__custom_metrics__" in results[0].final_state:
@@ -190,7 +221,9 @@ def render_results_dashboard(results: list[SimulationResult], scenario_name: str
             for i, k in enumerate(keys):
                 vals = [m.get(k, 0) for m in all_cm if isinstance(m, dict)]
                 if vals:
-                    cols[i % 4].metric(k, f"{np.mean(vals):,.2f}", f"avg across {len(results)} sims")
+                    cols[i % 4].metric(
+                        k, f"{np.mean(vals):,.2f}", f"avg across {len(results)} sims"
+                    )
 
     # --- 5. Risk Analysis (best effort) ---
     try:

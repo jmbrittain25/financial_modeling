@@ -42,7 +42,9 @@ PRESET_DEFS: list[dict[str, Any]] = [
         "builder": lambda: ComposedEventBuilder(
             name="monthly_opex",
             timing=IntervalTiming(interval=timedelta(days=30)),
-            value_gen=DistributionValue(dist=TriangularDistribution(low=-18500, mode=-16200, high=-14100)),
+            value_gen=DistributionValue(
+                dist=TriangularDistribution(low=-18500, mode=-16200, high=-14100)
+            ),
             metadata={"type": "opex"},
         ),
     },
@@ -51,7 +53,9 @@ PRESET_DEFS: list[dict[str, Any]] = [
         "builder": lambda: ComposedEventBuilder(
             name="mortgage_payment",
             timing=IntervalTiming(interval=timedelta(days=30)),
-            value_gen=VariableRateLoanValue(principal=320000.0, initial_rate=0.065, term_months=360, rate_key="mortgage_rate"),
+            value_gen=VariableRateLoanValue(
+                principal=320000.0, initial_rate=0.065, term_months=360, rate_key="mortgage_rate"
+            ),
             metadata={"type": "loan_payment"},
         ),
     },
@@ -95,7 +99,9 @@ PRESET_DEFS: list[dict[str, Any]] = [
         "label": "🌊 Seasonal Revenue (Q4 spike)",
         "builder": lambda: ComposedEventBuilder(
             name="seasonal_revenue",
-            timing=SeasonalTiming(inner=IntervalTiming(interval=timedelta(days=30)), months=[10, 11, 12]),
+            timing=SeasonalTiming(
+                inner=IntervalTiming(interval=timedelta(days=30)), months=[10, 11, 12]
+            ),
             value_gen=FixedValue(value=28500.0),
             metadata={"type": "revenue"},
         ),
@@ -119,7 +125,9 @@ def render_event_builder_list_editor(
         builders = []
 
     st.markdown("### 📅 Event Sources")
-    st.caption("These are the discrete cash-flow generators. Use the quick presets for the most common patterns, or build a fully custom one below.")
+    st.caption(
+        "These are the discrete cash-flow generators. Use the quick presets for the most common patterns, or build a fully custom one below."
+    )
 
     # Preset bar (the magic for non-technical users)
     st.markdown("**Quick Add Presets** — click any to append a realistic, ready-to-run event")
@@ -143,7 +151,9 @@ def render_event_builder_list_editor(
         for idx, eb in enumerate(builders):
             with st.container(border=True):
                 c1, c2, c3, c4 = st.columns([3, 1, 1, 1])
-                c1.markdown(f"**{eb.name or f'Event {idx+1}'}** — `{eb.metadata.get('type', 'custom')}`")
+                c1.markdown(
+                    f"**{eb.name or f'Event {idx + 1}'}** — `{eb.metadata.get('type', 'custom')}`"
+                )
                 if c2.button("✏️ Edit", key=f"{key_prefix}_edit_{idx}", use_container_width=True):
                     st.session_state[f"{key_prefix}_editing_idx"] = idx
                     st.rerun()
@@ -167,8 +177,16 @@ def render_event_builder_list_editor(
         st.markdown(f"### Editing Event #{editing_idx + 1}")
         current = builders[editing_idx]
 
-        name = st.text_input("Event name (for your reference)", value=current.name or "", key=f"{key_prefix}_edit_name")
-        meta_type = st.text_input("Type tag (used by metrics & reports)", value=current.metadata.get("type", "custom"), key=f"{key_prefix}_edit_meta")
+        name = st.text_input(
+            "Event name (for your reference)",
+            value=current.name or "",
+            key=f"{key_prefix}_edit_name",
+        )
+        meta_type = st.text_input(
+            "Type tag (used by metrics & reports)",
+            value=current.metadata.get("type", "custom"),
+            key=f"{key_prefix}_edit_meta",
+        )
 
         # Sub-editors
         new_timing = render_timing_editor(
@@ -182,7 +200,9 @@ def render_event_builder_list_editor(
         )
 
         c1, c2 = st.columns(2)
-        if c1.button("✅ Save Changes", type="primary", key=f"{key_prefix}_save_edit_{editing_idx}"):
+        if c1.button(
+            "✅ Save Changes", type="primary", key=f"{key_prefix}_save_edit_{editing_idx}"
+        ):
             builders[editing_idx] = ComposedEventBuilder(
                 name=name or None,
                 timing=new_timing,

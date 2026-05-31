@@ -93,7 +93,11 @@ def _load_json_or_default(path: Path, default_factory):
         return default_factory()
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
-        return default_factory.__self__.from_dict(data) if hasattr(default_factory, "__self__") else data
+        return (
+            default_factory.__self__.from_dict(data)
+            if hasattr(default_factory, "__self__")
+            else data
+        )
     except Exception:
         return default_factory()
 
@@ -133,7 +137,10 @@ def save_user_scenario(cfg: ScenarioConfig, overwrite: bool = True) -> Path:
     Filename is slugified from the scenario name.
     """
     ensure_user_dirs()
-    safe_name = "".join(c if c.isalnum() or c in ("-", "_") else "-" for c in cfg.name).strip("-")[:80] or "untitled"
+    safe_name = (
+        "".join(c if c.isalnum() or c in ("-", "_") else "-" for c in cfg.name).strip("-")[:80]
+        or "untitled"
+    )
     path = USER_SCENARIOS_DIR / f"{safe_name}.json"
     if path.exists() and not overwrite:
         # append numeric suffix

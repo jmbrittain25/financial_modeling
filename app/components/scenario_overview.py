@@ -68,11 +68,13 @@ def _sample_deterministic_events(cfg: ScenarioConfig, max_events: int = 40) -> l
             t = start
             count = 0
             while t <= end and count < 6:
-                events.append({
-                    "time": t,
-                    "value": approx_value,
-                    "name": builder.name or builder.metadata.get("type", "event"),
-                })
+                events.append(
+                    {
+                        "time": t,
+                        "value": approx_value,
+                        "name": builder.name or builder.metadata.get("type", "event"),
+                    }
+                )
                 # Advance roughly
                 if hasattr(timing, "interval"):
                     t = t + timing.interval
@@ -104,10 +106,13 @@ def render_scenario_overview(cfg: ScenarioConfig, key_prefix: str = "overview"):
     col5.metric("Custom Metrics", len(cfg.custom_metrics))
 
     # Risk / complexity badge
-    has_stochastic = any(
-        hasattr(eb.value_gen, "dist") and eb.value_gen.dist is not None
-        for eb in cfg.event_builders
-    ) or len(cfg.external_drivers) > 0
+    has_stochastic = (
+        any(
+            hasattr(eb.value_gen, "dist") and eb.value_gen.dist is not None
+            for eb in cfg.event_builders
+        )
+        or len(cfg.external_drivers) > 0
+    )
 
     complexity = "Low"
     if len(cfg.event_builders) > 4 or has_stochastic:
@@ -115,7 +120,9 @@ def render_scenario_overview(cfg: ScenarioConfig, key_prefix: str = "overview"):
     if len(cfg.event_builders) > 8 or len(cfg.external_drivers) > 1:
         complexity = "High"
 
-    st.caption(f"**Complexity:** {complexity}  |  **Stochastic elements:** {'Yes' if has_stochastic else 'No'}")
+    st.caption(
+        f"**Complexity:** {complexity}  |  **Stochastic elements:** {'Yes' if has_stochastic else 'No'}"
+    )
 
     # --- Event Schedule Preview (Plotly) ---
     st.markdown("**Event Schedule Preview** (approximate, using mean values)")
@@ -134,27 +141,31 @@ def render_scenario_overview(cfg: ScenarioConfig, key_prefix: str = "overview"):
         fig = go.Figure()
 
         # Scatter of events
-        fig.add_trace(go.Scatter(
-            x=x_years,
-            y=values,
-            mode="markers+text",
-            marker=dict(size=10, color="#3b82f6"),
-            text=names,
-            textposition="top center",
-            name="Approximate Events",
-            hovertemplate="%{text}<br>Year %{x:.1f}<br>Value: %{y:,.0f}<extra></extra>",
-        ))
+        fig.add_trace(
+            go.Scatter(
+                x=x_years,
+                y=values,
+                mode="markers+text",
+                marker=dict(size=10, color="#3b82f6"),
+                text=names,
+                textposition="top center",
+                name="Approximate Events",
+                hovertemplate="%{text}<br>Year %{x:.1f}<br>Value: %{y:,.0f}<extra></extra>",
+            )
+        )
 
         # Cumulative impact line (very rough)
         cum = np.cumsum(values)
-        fig.add_trace(go.Scatter(
-            x=x_years,
-            y=cum,
-            mode="lines",
-            line=dict(color="#ef4444", width=2, dash="dash"),
-            name="Rough Cumulative Impact",
-            hovertemplate="Cumulative: %{y:,.0f}<extra></extra>",
-        ))
+        fig.add_trace(
+            go.Scatter(
+                x=x_years,
+                y=cum,
+                mode="lines",
+                line=dict(color="#ef4444", width=2, dash="dash"),
+                name="Rough Cumulative Impact",
+                hovertemplate="Cumulative: %{y:,.0f}<extra></extra>",
+            )
+        )
 
         fig.update_layout(
             height=340,

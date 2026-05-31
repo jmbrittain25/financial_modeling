@@ -137,8 +137,13 @@ def test_editor_factories_can_be_composed_into_full_scenario():
         event_builders=[builder],
         custom_metrics=[
             # Use one of the new UI-enhanced metric fields to ensure they serialize
-            {"name": "final_cash", "metric_type": "final_state_value", "params": {"key": "cumulative_cash"},
-             "display_format": "currency", "higher_is_better": True}
+            {
+                "name": "final_cash",
+                "metric_type": "final_state_value",
+                "params": {"key": "cumulative_cash"},
+                "display_format": "currency",
+                "higher_is_better": True,
+            }
         ],
     )
 

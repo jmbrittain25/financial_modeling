@@ -63,7 +63,6 @@ nav = st.radio(
 )
 
 
-
 # =============================================================================
 # SESSION STATE
 # =============================================================================
@@ -84,6 +83,7 @@ if "results" not in st.session_state:
 
 if "lib" not in st.session_state:
     from financial_simulator.scenarios import DistributionLibrary
+
     st.session_state.lib = DistributionLibrary()
 
 # First-run seeding of user library with high-quality templates (Step 8)
@@ -91,7 +91,13 @@ if "user_libs_seeded" not in st.session_state:
     try:
         user_scen_lib = load_user_scenario_library()
         if len(user_scen_lib.scenarios) == 0:
-            for template_name in ["retirement_30yr", "variable_rate_mortgage", "business_variable_costs", "tax_planning_optimized", "savings_with_growth"]:
+            for template_name in [
+                "retirement_30yr",
+                "variable_rate_mortgage",
+                "business_variable_costs",
+                "tax_planning_optimized",
+                "savings_with_growth",
+            ]:
                 try:
                     tmpl = load_template(template_name)
                     # Save copies so user can modify without affecting originals
@@ -117,9 +123,11 @@ with st.sidebar:
 
     cols = st.columns(2)
     cols[0].metric("Horizon", f"{summary['horizon_years']}y")
-    cols[1].metric("Events", summary['num_event_builders'])
+    cols[1].metric("Events", summary["num_event_builders"])
 
-    st.caption(f"Drivers: {summary['num_drivers']} • Processes: {summary['num_continuous']} • Metrics: {summary['num_custom_metrics']}")
+    st.caption(
+        f"Drivers: {summary['num_drivers']} • Processes: {summary['num_continuous']} • Metrics: {summary['num_custom_metrics']}"
+    )
 
     if st.button("💾 Save Now", use_container_width=True, key="sidebar_save"):
         try:
@@ -145,7 +153,9 @@ if nav == "🛠️ Scenario Builder":
     st.markdown(
         "Build, tweak, preview, save, and run complex financial simulations — no code required."
     )
-    st.caption("Tip: Start with a template from the gallery below, then use the presets in the Event Editor to rapidly construct realistic cash flows.")
+    st.caption(
+        "Tip: Start with a template from the gallery below, then use the presets in the Event Editor to rapidly construct realistic cash flows."
+    )
 
     badges = []
     if current.external_drivers:
@@ -201,19 +211,27 @@ if nav == "🛠️ Scenario Builder":
 
     # === NEW EDITORS (Step 7 integration) ===
     st.divider()
-    with st.expander("📊 Custom Metrics (optional but powerful)", expanded=len(current.custom_metrics) > 0):
+    with st.expander(
+        "📊 Custom Metrics (optional but powerful)", expanded=len(current.custom_metrics) > 0
+    ):
         current.custom_metrics = render_custom_metrics_editor(
             key_prefix="main_builder_metrics",
             metrics=current.custom_metrics,
         )
 
-    with st.expander("🔗 External Drivers (for variable rates, inflation, etc.)", expanded=len(current.external_drivers) > 0):
+    with st.expander(
+        "🔗 External Drivers (for variable rates, inflation, etc.)",
+        expanded=len(current.external_drivers) > 0,
+    ):
         current.external_drivers = render_external_drivers_editor(
             key_prefix="main_builder_drivers",
             drivers=current.external_drivers,
         )
 
-    with st.expander("📈 Continuous Processes (growth & stochastic paths)", expanded=len(current.continuous_processes) > 0):
+    with st.expander(
+        "📈 Continuous Processes (growth & stochastic paths)",
+        expanded=len(current.continuous_processes) > 0,
+    ):
         current.continuous_processes = render_continuous_processes_editor(
             key_prefix="main_builder_processes",
             processes=current.continuous_processes,
@@ -225,13 +243,17 @@ if nav == "🛠️ Scenario Builder":
 
     # Distribution picker (still useful)
     st.subheader("🎲 Quick Distribution Explorer")
-    st.caption("Use this to explore or create distributions, then embed them via the Event Editor above.")
+    st.caption(
+        "Use this to explore or create distributions, then embed them via the Event Editor above."
+    )
     render_distribution_picker(key_prefix="builder_dist", show_save_section=False)
 
     # Preview & Run controls + Save
     st.divider()
     st.markdown("**Run & Persist**")
-    st.caption("Always save your work. Single-run previews are fast and great for sanity checks before launching Monte Carlo.")
+    st.caption(
+        "Always save your work. Single-run previews are fast and great for sanity checks before launching Monte Carlo."
+    )
 
     c1, c2, c3, c4 = st.columns(4)
     with c1:
@@ -241,7 +263,14 @@ if nav == "🛠️ Scenario Builder":
                 st.session_state.preview_result = res
             st.success("Preview complete. Check the JSON below.")
     with c2:
-        n_sims = st.slider("Monte Carlo runs", 50, 2000, 300, 50, help="More runs = better statistics but longer wait")
+        n_sims = st.slider(
+            "Monte Carlo runs",
+            50,
+            2000,
+            300,
+            50,
+            help="More runs = better statistics but longer wait",
+        )
     with c3:
         if st.button("🚀 Run Monte Carlo from Builder", type="primary", use_container_width=True):
             with st.spinner(f"Running {n_sims} simulations..."):
@@ -330,7 +359,9 @@ elif nav == "🎲 Distribution Library":
         for d in st.session_state.lib.distributions:
             st.write(f"**{d.name}** — {d.description or 'No description'}")
     else:
-        st.info("Save distributions from the picker above — they will appear here and be available when building scenarios.")
+        st.info(
+            "Save distributions from the picker above — they will appear here and be available when building scenarios."
+        )
 
 # =============================================================================
 # MODE: MY SCENARIOS + DISTRIBUTION LIBRARY (now powered by real persistence)

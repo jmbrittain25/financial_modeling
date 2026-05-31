@@ -1,0 +1,4 @@
+# file: /Users/justinbrittain/.grok/worktrees/projects-financial-modeling/advanced-ui-2/src/financial_simulator/core/stochastic.py
+# hypothesis_version: 6.155.1
+
+[0.5, 365.25, 3600, 'forbid']

@@ -74,10 +74,14 @@ def render_continuous_processes_editor(
     )
 
     cols = st.columns(3)
-    if cols[0].button("➕ Simple Appreciation", key=f"{key_prefix}_add_app", use_container_width=True):
+    if cols[0].button(
+        "➕ Simple Appreciation", key=f"{key_prefix}_add_app", use_container_width=True
+    ):
         processes = processes + [get_default_appreciation()]
         st.rerun()
-    if cols[1].button("➕ GBM (Stocks/Equity)", key=f"{key_prefix}_add_gbm", use_container_width=True):
+    if cols[1].button(
+        "➕ GBM (Stocks/Equity)", key=f"{key_prefix}_add_gbm", use_container_width=True
+    ):
         processes = processes + [get_default_gbm()]
         st.rerun()
     if cols[2].button("➕ Mean Reverting", key=f"{key_prefix}_add_mr", use_container_width=True):
@@ -85,7 +89,9 @@ def render_continuous_processes_editor(
         st.rerun()
 
     if not processes:
-        st.info("No continuous processes defined. These are excellent for modeling growth of investments or assets over time.")
+        st.info(
+            "No continuous processes defined. These are excellent for modeling growth of investments or assets over time."
+        )
     else:
         to_delete = []
         for idx, proc in enumerate(processes):
@@ -97,16 +103,45 @@ def render_continuous_processes_editor(
                 if c2.button("🗑️", key=f"{key_prefix}_del_{idx}", use_container_width=True):
                     to_delete.append(idx)
 
-                new_name = st.text_input("Name (optional)", value=getattr(proc, "name", ""), key=f"{key_prefix}_pname_{idx}")
-                new_var = st.text_input("State Variable to Affect", value=getattr(proc, "var", ""), key=f"{key_prefix}_pvar_{idx}")
+                new_name = st.text_input(
+                    "Name (optional)",
+                    value=getattr(proc, "name", ""),
+                    key=f"{key_prefix}_pname_{idx}",
+                )
+                new_var = st.text_input(
+                    "State Variable to Affect",
+                    value=getattr(proc, "var", ""),
+                    key=f"{key_prefix}_pvar_{idx}",
+                )
 
                 if isinstance(proc, AppreciationProcess):
-                    rate = st.number_input("Annual Growth Rate", value=proc.rate, step=0.005, format="%.3f", key=f"{key_prefix}_app_rate_{idx}")
-                    processes[idx] = AppreciationProcess(rate=float(rate), var=new_var, name=new_name or None)
+                    rate = st.number_input(
+                        "Annual Growth Rate",
+                        value=proc.rate,
+                        step=0.005,
+                        format="%.3f",
+                        key=f"{key_prefix}_app_rate_{idx}",
+                    )
+                    processes[idx] = AppreciationProcess(
+                        rate=float(rate), var=new_var, name=new_name or None
+                    )
 
                 elif isinstance(proc, GBMContinuousProcess):
-                    drift = st.number_input("Drift (expected return)", value=proc.process.drift, step=0.005, format="%.3f", key=f"{key_prefix}_gbm_drift_{idx}")
-                    vol = st.number_input("Volatility (std dev)", value=proc.process.volatility, min_value=0.001, step=0.01, format="%.3f", key=f"{key_prefix}_gbm_vol_{idx}")
+                    drift = st.number_input(
+                        "Drift (expected return)",
+                        value=proc.process.drift,
+                        step=0.005,
+                        format="%.3f",
+                        key=f"{key_prefix}_gbm_drift_{idx}",
+                    )
+                    vol = st.number_input(
+                        "Volatility (std dev)",
+                        value=proc.process.volatility,
+                        min_value=0.001,
+                        step=0.01,
+                        format="%.3f",
+                        key=f"{key_prefix}_gbm_vol_{idx}",
+                    )
                     processes[idx] = GBMContinuousProcess(
                         var=new_var,
                         process=GeometricBrownianMotion(drift=float(drift), volatility=float(vol)),
@@ -114,12 +149,33 @@ def render_continuous_processes_editor(
                     )
 
                 elif isinstance(proc, MeanRevertingContinuousProcess):
-                    ltm = st.number_input("Long-term Mean", value=proc.process.long_term_mean, step=0.005, format="%.3f", key=f"{key_prefix}_mr_mean_{idx}")
-                    speed = st.number_input("Speed of Reversion", value=proc.process.speed, min_value=0.01, step=0.1, key=f"{key_prefix}_mr_speed_{idx}")
-                    vol = st.number_input("Volatility", value=proc.process.volatility, min_value=0.001, step=0.005, format="%.3f", key=f"{key_prefix}_mr_vol_{idx}")
+                    ltm = st.number_input(
+                        "Long-term Mean",
+                        value=proc.process.long_term_mean,
+                        step=0.005,
+                        format="%.3f",
+                        key=f"{key_prefix}_mr_mean_{idx}",
+                    )
+                    speed = st.number_input(
+                        "Speed of Reversion",
+                        value=proc.process.speed,
+                        min_value=0.01,
+                        step=0.1,
+                        key=f"{key_prefix}_mr_speed_{idx}",
+                    )
+                    vol = st.number_input(
+                        "Volatility",
+                        value=proc.process.volatility,
+                        min_value=0.001,
+                        step=0.005,
+                        format="%.3f",
+                        key=f"{key_prefix}_mr_vol_{idx}",
+                    )
                     processes[idx] = MeanRevertingContinuousProcess(
                         var=new_var,
-                        process=MeanRevertingProcess(long_term_mean=float(ltm), speed=float(speed), volatility=float(vol)),
+                        process=MeanRevertingProcess(
+                            long_term_mean=float(ltm), speed=float(speed), volatility=float(vol)
+                        ),
                         name=new_name or None,
                     )
                 else:

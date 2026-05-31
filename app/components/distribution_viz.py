@@ -472,7 +472,9 @@ def render_distribution_gallery(key_prefix: str = "gallery") -> dict[str, AnyDis
         "Equity Returns (volatile)": NormalDistribution(mean=0.09, std=0.22),
         "Inflation (moderate)": NormalDistribution(mean=0.025, std=0.012),
         "Home Appreciation (triangular)": TriangularDistribution(low=0.01, mode=0.035, high=0.06),
-        "Large One-time Expense (lognormal)": LogNormalDistribution(mean=10.5, sigma=0.6),  # ~$36k median
+        "Large One-time Expense (lognormal)": LogNormalDistribution(
+            mean=10.5, sigma=0.6
+        ),  # ~$36k median
         "Interest Rate Shock (±1.5%)": NormalDistribution(mean=0.0, std=0.015),
     }
 

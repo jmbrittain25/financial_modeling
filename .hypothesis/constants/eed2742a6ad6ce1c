@@ -1,0 +1,4 @@
+# file: /Users/justinbrittain/.grok/worktrees/projects-financial-modeling/advanced-ui-2/app/components/scenario_overview.py
+# hypothesis_version: 6.155.1
+
+[0.0, 1.0, 1.02, 365.25, 340, '#3b82f6', '#ef4444', '**Quick Actions**', 'Approximate Events', 'Continuous Processes', 'Custom Metrics', 'Event Sources', 'External Drivers', 'High', 'Horizon', 'Low', 'Medium', 'Years from Start', 'amount', 'application/json', 'dash', 'dist', 'event', 'h', 'high', 'initial_value', 'interval', 'json', 'lines', 'low', 'markers+text', 'mean', 'mode', 'name', 'overview', 'plotly_white', 'rate', 'time', 'top center', 'type', 'value', 'x unified', '📋 Copy Scenario JSON', '📤 Export as File', '🔄 Duplicate Scenario']

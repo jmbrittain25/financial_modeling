@@ -44,15 +44,20 @@ def _render_scenario_library(key_prefix: str):
         lib = ScenarioLibrary()
 
     if not lib.scenarios:
-        st.info("You haven't saved any scenarios yet. Build something in the Scenario Builder and click **Save to My Library**.")
+        st.info(
+            "You haven't saved any scenarios yet. Build something in the Scenario Builder and click **Save to My Library**."
+        )
         return
 
     # Simple search
     search = st.text_input("Search your scenarios", key=f"{key_prefix}_search")
 
     filtered = [
-        s for s in lib.scenarios
-        if not search or search.lower() in (s.name or "").lower() or search.lower() in (s.description or "").lower()
+        s
+        for s in lib.scenarios
+        if not search
+        or search.lower() in (s.name or "").lower()
+        or search.lower() in (s.description or "").lower()
     ]
 
     for i, scenario in enumerate(filtered):
@@ -64,7 +69,9 @@ def _render_scenario_library(key_prefix: str):
                 c1.caption(scenario.description[:120])
 
             summary = scenario.summary()
-            c1.caption(f"{summary['horizon_years']}y • {summary['num_event_builders']} events • {summary['num_custom_metrics']} metrics")
+            c1.caption(
+                f"{summary['horizon_years']}y • {summary['num_event_builders']} events • {summary['num_custom_metrics']} metrics"
+            )
 
             if c2.button("Load", key=f"{key_prefix}_load_{i}"):
                 st.session_state["current_scenario"] = scenario.clone()
@@ -97,15 +104,14 @@ def _render_distribution_library(key_prefix: str):
         lib = DistributionLibrary()
 
     if not lib.distributions:
-        st.info("You haven't saved any custom distributions yet. Use the Distribution picker and click **Save to Library**.")
+        st.info(
+            "You haven't saved any custom distributions yet. Use the Distribution picker and click **Save to Library**."
+        )
         return
 
     search = st.text_input("Search distributions", key=f"{key_prefix}_search")
 
-    filtered = [
-        d for d in lib.distributions
-        if not search or search.lower() in d.name.lower()
-    ]
+    filtered = [d for d in lib.distributions if not search or search.lower() in d.name.lower()]
 
     for i, dist in enumerate(filtered):
         with st.container(border=True):
@@ -119,7 +125,9 @@ def _render_distribution_library(key_prefix: str):
 
             if c2.button("Load into Editor", key=f"{key_prefix}_load_dist_{i}"):
                 st.session_state[f"{key_prefix}_selected_dist"] = dist.dist
-                st.success(f"Loaded '{dist.name}' — switch to Distribution Library mode to tweak it.")
+                st.success(
+                    f"Loaded '{dist.name}' — switch to Distribution Library mode to tweak it."
+                )
                 st.rerun()
 
             if c3.button("🗑️", key=f"{key_prefix}_del_dist_{i}"):

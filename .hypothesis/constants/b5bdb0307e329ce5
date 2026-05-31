@@ -1,0 +1,4 @@
+# file: /Users/justinbrittain/.grok/worktrees/projects-financial-modeling/advanced-ui-2/app/components/timing_editor.py
+# hypothesis_version: 6.155.1
+
+[500, 2026, 2027, 3650, ' → ', '#### ⏱️ Timing', 'Fire Date', 'How many times?', 'Interval', 'OneTime', 'Random', 'Seasonal', 'TIMING_TYPE_LABELS', 'Timing Pattern', 'Window end', 'Window start', 'date', 'end', 'get_default_timing', 'interval', 'model_copy', 'months', 'n', 'render_timing_editor', 'start', 'start_time', 'time', 'timing', 'type']

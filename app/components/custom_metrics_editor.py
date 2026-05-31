@@ -33,7 +33,11 @@ METRIC_TYPE_INFO: dict[str, dict[str, str]] = {
     "time_to_threshold": {
         "label": "Time to Threshold",
         "description": "Years until a state variable crosses a threshold (or 999 if never).",
-        "example_params": {"state_key": "portfolio_value", "threshold": 500000, "direction": "above"},
+        "example_params": {
+            "state_key": "portfolio_value",
+            "threshold": 500000,
+            "direction": "above",
+        },
     },
 }
 
@@ -43,20 +47,45 @@ def get_default_metric(metric_type: str) -> CustomMetric:
     params = info.get("example_params", {}).copy()
 
     if metric_type == "final_state_value":
-        return CustomMetric(name="final_value", metric_type=metric_type, params=params,
-                            display_format="currency", higher_is_better=True)
+        return CustomMetric(
+            name="final_value",
+            metric_type=metric_type,
+            params=params,
+            display_format="currency",
+            higher_is_better=True,
+        )
     if metric_type == "sum_positive_events":
-        return CustomMetric(name="total_inflows", metric_type=metric_type, params=params,
-                            display_format="currency", higher_is_better=True)
+        return CustomMetric(
+            name="total_inflows",
+            metric_type=metric_type,
+            params=params,
+            display_format="currency",
+            higher_is_better=True,
+        )
     if metric_type == "max_drawdown_on_path":
-        return CustomMetric(name="max_drawdown", metric_type=metric_type, params=params,
-                            display_format="percent", higher_is_better=False)
+        return CustomMetric(
+            name="max_drawdown",
+            metric_type=metric_type,
+            params=params,
+            display_format="percent",
+            higher_is_better=False,
+        )
     if metric_type == "event_count_by_type":
-        return CustomMetric(name="event_count", metric_type=metric_type, params=params,
-                            display_format="count", higher_is_better=True)
+        return CustomMetric(
+            name="event_count",
+            metric_type=metric_type,
+            params=params,
+            display_format="count",
+            higher_is_better=True,
+        )
     if metric_type == "time_to_threshold":
-        return CustomMetric(name="years_to_goal", metric_type=metric_type, params=params,
-                            display_format="years", higher_is_better=False)
+        return CustomMetric(
+            name="years_to_goal",
+            metric_type=metric_type,
+            params=params,
+            display_format="years",
+            higher_is_better=False,
+        )
 
     return CustomMetric(name="custom_metric", metric_type=metric_type, params=params)
 
@@ -98,7 +127,9 @@ def render_custom_metrics_editor(
     st.divider()
 
     if not metrics:
-        st.info("No custom metrics defined yet. Use the quick add buttons above or create one manually.")
+        st.info(
+            "No custom metrics defined yet. Use the quick add buttons above or create one manually."
+        )
     else:
         to_delete = []
         for idx, m in enumerate(metrics):
@@ -110,8 +141,12 @@ def render_custom_metrics_editor(
                     to_delete.append(idx)
 
                 # Editable fields
-                new_name = st.text_input("Metric Name", value=m.name, key=f"{key_prefix}_name_{idx}")
-                new_desc = st.text_input("Description (optional)", value=m.description, key=f"{key_prefix}_desc_{idx}")
+                new_name = st.text_input(
+                    "Metric Name", value=m.name, key=f"{key_prefix}_name_{idx}"
+                )
+                new_desc = st.text_input(
+                    "Description (optional)", value=m.description, key=f"{key_prefix}_desc_{idx}"
+                )
 
                 # Type (read-only for now to keep simple; changing type is advanced)
                 st.caption(f"Type: **{m.metric_type}**")
@@ -121,16 +156,22 @@ def render_custom_metrics_editor(
                 new_params = {}
                 for k, v in (m.params or {}).items():
                     if isinstance(v, (int, float)):
-                        new_params[k] = st.number_input(k, value=float(v), key=f"{key_prefix}_param_{idx}_{k}")
+                        new_params[k] = st.number_input(
+                            k, value=float(v), key=f"{key_prefix}_param_{idx}_{k}"
+                        )
                     else:
-                        new_params[k] = st.text_input(k, value=str(v), key=f"{key_prefix}_param_{idx}_{k}")
+                        new_params[k] = st.text_input(
+                            k, value=str(v), key=f"{key_prefix}_param_{idx}_{k}"
+                        )
 
                 # UI display hints
                 c1, c2, c3 = st.columns(3)
                 new_format = c1.selectbox(
                     "Display Format",
                     ["currency", "percent", "number", "years", "count"],
-                    index=["currency", "percent", "number", "years", "count"].index(m.display_format),
+                    index=["currency", "percent", "number", "years", "count"].index(
+                        m.display_format
+                    ),
                     key=f"{key_prefix}_format_{idx}",
                 )
                 new_higher = c2.selectbox(
@@ -139,11 +180,16 @@ def render_custom_metrics_editor(
                     index={True: 0, False: 1, None: 2}.get(m.higher_is_better, 2),
                     key=f"{key_prefix}_higher_{idx}",
                 )
-                new_goal = c3.number_input(
-                    "Goal / Target (optional)",
-                    value=m.goal_value if m.goal_value is not None else 0.0,
-                    key=f"{key_prefix}_goal_{idx}",
-                ) if m.goal_value is not None or st.checkbox("Set a goal value", key=f"{key_prefix}_hasgoal_{idx}") else None
+                new_goal = (
+                    c3.number_input(
+                        "Goal / Target (optional)",
+                        value=m.goal_value if m.goal_value is not None else 0.0,
+                        key=f"{key_prefix}_goal_{idx}",
+                    )
+                    if m.goal_value is not None
+                    or st.checkbox("Set a goal value", key=f"{key_prefix}_hasgoal_{idx}")
+                    else None
+                )
 
                 # Apply updates
                 metrics[idx] = CustomMetric(

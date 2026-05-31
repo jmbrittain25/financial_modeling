@@ -145,13 +145,23 @@ def render_timing_editor(
 
     elif timing_type == "Random":
         col1, col2, col3 = st.columns(3)
-        start_d = params.get("start", datetime(2026, 1, 1)).date() if hasattr(params.get("start", datetime(2026, 1, 1)), "date") else datetime(2026, 1, 1).date()
-        end_d = params.get("end", datetime(2026, 12, 31)).date() if hasattr(params.get("end", datetime(2026, 12, 31)), "date") else datetime(2026, 12, 31).date()
+        start_d = (
+            params.get("start", datetime(2026, 1, 1)).date()
+            if hasattr(params.get("start", datetime(2026, 1, 1)), "date")
+            else datetime(2026, 1, 1).date()
+        )
+        end_d = (
+            params.get("end", datetime(2026, 12, 31)).date()
+            if hasattr(params.get("end", datetime(2026, 12, 31)), "date")
+            else datetime(2026, 12, 31).date()
+        )
         n_val = int(params.get("n", 3))
 
         s = col1.date_input("Window start", value=start_d, key=f"{key_prefix}_rand_start")
         e = col2.date_input("Window end", value=end_d, key=f"{key_prefix}_rand_end")
-        n = col3.number_input("How many times?", min_value=1, max_value=500, value=n_val, key=f"{key_prefix}_rand_n")
+        n = col3.number_input(
+            "How many times?", min_value=1, max_value=500, value=n_val, key=f"{key_prefix}_rand_n"
+        )
 
         timing = RandomTiming(
             start=datetime.combine(s, datetime.min.time()),

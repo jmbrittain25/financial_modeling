@@ -1,0 +1,4 @@
+# file: /Users/justinbrittain/.grok/worktrees/projects-financial-modeling/advanced-ui-2/app/components/continuous_processes_editor.py
+# hypothesis_version: 6.155.1
+
+[0.001, 0.005, 0.008, 0.01, 0.04, 0.045, 0.08, 0.1, 0.16, 1.2, '%.3f', 'Annual Growth Rate', 'Equity GBM', 'Home Appreciation', 'Long-term Mean', 'Mean Reverting', 'Name (optional)', 'Rate Mean Reversion', 'Speed of Reversion', 'Volatility', 'Volatility (std dev)', 'appreciation', 'description', 'gbm', 'get_default_gbm', 'interest_rate', 'label', 'mean_reverting', 'name', 'processes', 'property_value', 'stocks', 'var', '➕ Mean Reverting', '🗑️']

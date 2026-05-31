@@ -275,7 +275,11 @@ def test_scenario_library_crud_and_summary():
         name="Biz",
         start=datetime(2026, 1, 1),
         end=datetime(2029, 1, 1),
-        event_builders=[ComposedEventBuilder(timing=IntervalTiming(interval=timedelta(days=30)), value_gen=FixedValue(value=1000))],
+        event_builders=[
+            ComposedEventBuilder(
+                timing=IntervalTiming(interval=timedelta(days=30)), value_gen=FixedValue(value=1000)
+            )
+        ],
     )
     s = cfg2.summary()
     assert s["horizon_years"] > 2.9
@@ -299,7 +303,9 @@ def test_user_persistence_helpers_smoke(tmp_path, monkeypatch):
     monkeypatch.setattr(pers, "USER_SCENARIOS_DIR", fake_root / "scenarios")
     monkeypatch.setattr(pers, "USER_DISTRIBUTIONS_FILE", fake_root / "dist_lib.json")
 
-    cfg = ScenarioConfig(name="My Custom Plan", start=datetime(2026, 1, 1), end=datetime(2027, 1, 1))
+    cfg = ScenarioConfig(
+        name="My Custom Plan", start=datetime(2026, 1, 1), end=datetime(2027, 1, 1)
+    )
     saved_path = save_user_scenario(cfg)
     assert saved_path.exists()
 
@@ -339,7 +345,9 @@ def test_scenario_config_get_all_referenced_distributions_and_helpers():
         event_builders=[
             ComposedEventBuilder(
                 timing=IntervalTiming(interval=timedelta(days=30)),
-                value_gen=DistributionValue(dist=TriangularDistribution(low=-100, mode=-50, high=-10)),
+                value_gen=DistributionValue(
+                    dist=TriangularDistribution(low=-100, mode=-50, high=-10)
+                ),
             )
         ],
     )
