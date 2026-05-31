@@ -6,6 +6,7 @@ rich quantitative analytics, and support for future autonomous AI agents.
 """
 
 from .core import (
+    AnyContinuousProcess,
     BetaDistribution,
     Event,
     GeometricBrownianMotion,
@@ -34,6 +35,7 @@ __all__ = [
     "BetaDistribution",
     "GeometricBrownianMotion",
     "MeanRevertingProcess",
+    "AnyContinuousProcess",
     "Loan",
     "TaxSchedule",
     "Portfolio",

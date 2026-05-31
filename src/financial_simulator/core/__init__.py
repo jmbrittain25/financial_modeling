@@ -69,6 +69,7 @@ from .simulation import (
     ContinuousProcess,
     GBMContinuousProcess,
     MeanRevertingContinuousProcess,
+    AnyContinuousProcess,
     SimulationEngine,
     SimulationResult,
 )
@@ -116,6 +117,7 @@ __all__ = [
     "AppreciationProcess",
     "GBMContinuousProcess",
     "MeanRevertingContinuousProcess",
+    "AnyContinuousProcess",
     "SimulationResult",
     "SimulationEngine",
     # stochastic processes

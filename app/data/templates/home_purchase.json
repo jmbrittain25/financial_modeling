@@ -1,0 +1,41 @@
+{
+  "version": "1.0",
+  "name": "Home Purchase + Appreciation",
+  "description": "Fixed mortgage + home appreciation.",
+  "tags": [
+    "real-estate"
+  ],
+  "is_template": true,
+  "start": "2026-07-01T00:00:00",
+  "end": "2036-07-01T00:00:00",
+  "initial_state": {
+    "home_value": 485000.0
+  },
+  "event_builders": [
+    {
+      "metadata": {
+        "type": "mortgage"
+      },
+      "timing": {
+        "type": "Interval",
+        "interval": "P30D"
+      },
+      "value_gen": {
+        "type": "VariableRateLoan",
+        "principal": 388000.0,
+        "initial_rate": 0.0675,
+        "term_months": 360,
+        "rate_key": "r"
+      }
+    }
+  ],
+  "continuous_processes": [
+    {
+      "type": "appreciation",
+      "rate": 0.035,
+      "var": "home_value"
+    }
+  ],
+  "external_drivers": [],
+  "custom_metrics": []
+}

@@ -1,0 +1,52 @@
+{
+  "version": "1.0",
+  "name": "Small Business Cash Flow (Variable Costs)",
+  "description": "3-year business with triangular monthly opex.",
+  "tags": [
+    "business",
+    "template"
+  ],
+  "is_template": true,
+  "start": "2026-01-01T00:00:00",
+  "end": "2029-01-01T00:00:00",
+  "initial_state": {
+    "cash": 120000.0,
+    "cumulative_cash": 0.0
+  },
+  "event_builders": [
+    {
+      "metadata": {
+        "type": "revenue"
+      },
+      "timing": {
+        "type": "Interval",
+        "interval": "P30D"
+      },
+      "value_gen": {
+        "type": "Fixed",
+        "value": 28000.0
+      }
+    },
+    {
+      "metadata": {
+        "type": "opex"
+      },
+      "timing": {
+        "type": "Interval",
+        "interval": "P30D"
+      },
+      "value_gen": {
+        "type": "Distribution",
+        "dist": {
+          "type": "triangular",
+          "low": -31000.0,
+          "mode": -26000.0,
+          "high": -22000.0
+        }
+      }
+    }
+  ],
+  "continuous_processes": [],
+  "external_drivers": [],
+  "custom_metrics": []
+}
