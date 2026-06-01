@@ -249,10 +249,6 @@ class ScenarioConfig(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
         validate_assignment=True,
-        json_encoders={
-            # Pydantic v2 handles most via mode="json"; keep for explicitness
-            dt.datetime: lambda v: v.isoformat(),
-        },
     )
 
     version: Literal["1.0"] = "1.0"

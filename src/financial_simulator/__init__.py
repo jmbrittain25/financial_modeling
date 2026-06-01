@@ -26,6 +26,9 @@ try:
 except ImportError:
     RiskAnalyzer = MonteCarloAnalyzer = RiskReport = None  # type: ignore
 
+# External Drivers (convenience re-export)
+from . import external_drivers
+
 __version__ = "0.3.0"
 
 __all__ = [
@@ -44,4 +47,5 @@ __all__ = [
     "RiskAnalyzer",
     "MonteCarloAnalyzer",
     "RiskReport",
+    "external_drivers",
 ]
