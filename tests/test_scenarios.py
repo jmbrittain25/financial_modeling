@@ -397,6 +397,103 @@ def test_persistence_user_scenario_library_roundtrip(tmp_path, monkeypatch):
     assert len(lib.scenarios) >= 2
 
 
+# =============================================================================
+# Delete + full builder flow hardening tests (post-UI-fix coverage)
+# =============================================================================
+
+
+def test_delete_user_scenario_actually_removes_file_and_does_not_resurrect(tmp_path, monkeypatch):
+    """delete_user_scenario must remove the .json so it does not reappear on reload."""
+    import financial_simulator.scenarios.persistence as pers
+    from financial_simulator.scenarios.persistence import (
+        delete_user_scenario,
+        list_user_scenarios,
+        load_user_scenario_library,
+        save_user_scenario,
+    )
+
+    fake_root = tmp_path / "del_test"
+    monkeypatch.setattr(pers, "USER_DATA_ROOT", fake_root)
+    monkeypatch.setattr(pers, "USER_SCENARIOS_DIR", fake_root / "scenarios")
+
+    cfg = ScenarioConfig(name="To Be Deleted", start=datetime(2026, 1, 1), end=datetime(2026, 6, 1))
+    p = save_user_scenario(cfg)
+    assert p.exists()
+
+    # Delete by name
+    assert delete_user_scenario("To Be Deleted") is True
+    assert not p.exists()
+
+    # Reload must not resurrect it
+    pairs = list_user_scenarios()
+    assert not any("To Be Deleted" in n for n, _ in pairs)
+
+    lib = load_user_scenario_library()
+    assert not any(s.name == "To Be Deleted" for s in lib.scenarios)
+
+
+def test_full_builder_flow_via_public_api_and_persistence(tmp_path, monkeypatch):
+    """Simulates the end-to-end that the now-fixed UI enables: load template → add content → save → load → run → custom metrics attached → delete."""
+    import financial_simulator.scenarios.persistence as pers
+    from financial_simulator.scenarios.persistence import (
+        delete_user_scenario,
+        load_user_scenario_library,
+        save_user_scenario,
+    )
+
+    fake_root = tmp_path / "flow_test"
+    monkeypatch.setattr(pers, "USER_DATA_ROOT", fake_root)
+    monkeypatch.setattr(pers, "USER_SCENARIOS_DIR", fake_root / "scenarios")
+
+    # 1. Start from a real template (what the gallery does)
+    base = load_template("retirement_30yr")
+
+    # 2. Simulate what the fixed editors now do: append real objects
+    from financial_simulator.core import FixedValue, IntervalTiming
+    from financial_simulator.core.event import ComposedEventBuilder
+    from financial_simulator.scenarios.drivers import make_inflation_driver
+    from financial_simulator.scenarios.models import CustomMetric
+
+    base.event_builders.append(
+        ComposedEventBuilder(
+            name="extra_inflow",
+            timing=IntervalTiming(interval=timedelta(days=90)),
+            value_gen=FixedValue(value=2500.0),
+            metadata={"type": "bonus"},
+        )
+    )
+    base.external_drivers.append(make_inflation_driver())
+    base.custom_metrics.append(
+        CustomMetric(
+            name="my_final_cash",
+            metric_type="final_state_value",
+            params={"key": "cumulative_cash"},
+            display_format="currency",
+            higher_is_better=True,
+        )
+    )
+
+    # 3. Save (what "Save to My Library" does)
+    saved_path = save_user_scenario(base)
+    assert saved_path.exists()
+
+    # 4. Load back (what "My Scenarios" + Load does)
+    lib = load_user_scenario_library()
+    assert any(s.name == base.name for s in lib.scenarios)
+    reloaded = next(s for s in lib.scenarios if s.name == base.name)
+
+    # 5. Run Monte Carlo with the loaded scenario (custom metrics must attach)
+    results = run_monte_carlo(reloaded, n_sims=8, base_seed=42, n_jobs=1)
+    assert len(results) == 8
+    for r in results:
+        cm = r.final_state.get("__custom_metrics__", {})
+        assert "my_final_cash" in cm  # from our added metric
+
+    # 6. Clean up (what the fixed delete button now does)
+    assert delete_user_scenario(base.name) is True
+    lib2 = load_user_scenario_library()
+    assert not any(s.name == base.name for s in lib2.scenarios)
+
 def test_custom_metric_time_to_threshold_and_event_count_paths():
     """Exercise two metric types that had low coverage."""
     from financial_simulator.scenarios import CustomMetric
