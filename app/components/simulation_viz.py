@@ -311,7 +311,12 @@ def create_spaghetti_plot(
                 times = bands[0.50].index
 
                 # p5-p95 band (lightest) - only if we have the outer quantiles
-                if 0.95 in bands and 0.05 in bands and not bands[0.95].empty and not bands[0.05].empty:
+                if (
+                    0.95 in bands
+                    and 0.05 in bands
+                    and not bands[0.95].empty
+                    and not bands[0.05].empty
+                ):
                     fig.add_trace(
                         go.Scatter(
                             x=list(times) + list(reversed(times)),
@@ -324,7 +329,12 @@ def create_spaghetti_plot(
                         )
                     )
                 # p25-p75 band
-                if 0.75 in bands and 0.25 in bands and not bands[0.75].empty and not bands[0.25].empty:
+                if (
+                    0.75 in bands
+                    and 0.25 in bands
+                    and not bands[0.75].empty
+                    and not bands[0.25].empty
+                ):
                     fig.add_trace(
                         go.Scatter(
                             x=list(times) + list(reversed(times)),
@@ -422,19 +432,28 @@ def create_spaghetti_plot(
         )
 
     # Layout
-    fig_title = title or f"Paths — {key} ({len(active_idx)} active, {len(selected_indices)} highlighted)"
+    fig_title = (
+        title or f"Paths — {key} ({len(active_idx)} active, {len(selected_indices)} highlighted)"
+    )
     fig.update_layout(
         title=fig_title,
         template="plotly_white",
         height=height,
         hovermode="x unified",
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(size=10)),
+        legend=dict(
+            orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1, font=dict(size=10)
+        ),
         margin=dict(l=40, r=20, t=60, b=40),
-        xaxis=dict(rangeslider=dict(visible=True), rangeselector=dict(buttons=[
-            dict(count=1, label="1y", step="year", stepmode="backward"),
-            dict(count=5, label="5y", step="year", stepmode="backward"),
-            dict(step="all", label="All"),
-        ])),
+        xaxis=dict(
+            rangeslider=dict(visible=True),
+            rangeselector=dict(
+                buttons=[
+                    dict(count=1, label="1y", step="year", stepmode="backward"),
+                    dict(count=5, label="5y", step="year", stepmode="backward"),
+                    dict(step="all", label="All"),
+                ]
+            ),
+        ),
         yaxis_title=key,
         colorway=_financial_colorway(),
     )
@@ -455,22 +474,37 @@ def create_fan_chart(
     times = bands[0.50].index
 
     fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        x=list(times) + list(reversed(times)),
-        y=list(bands[0.95]) + list(reversed(bands[0.05])),
-        fill="toself", fillcolor="rgba(147, 197, 253, 0.22)",
-        line=dict(color="rgba(0,0,0,0)"), name="5-95%", hoverinfo="skip",
-    ))
-    fig.add_trace(go.Scatter(
-        x=list(times) + list(reversed(times)),
-        y=list(bands[0.75]) + list(reversed(bands[0.25])),
-        fill="toself", fillcolor="rgba(59, 130, 246, 0.35)",
-        line=dict(color="rgba(0,0,0,0)"), name="25-75%", hoverinfo="skip",
-    ))
-    fig.add_trace(go.Scatter(
-        x=times, y=bands[0.50], mode="lines",
-        line=dict(color="#1e3a8a", width=2.8), name="Median",
-    ))
+    fig.add_trace(
+        go.Scatter(
+            x=list(times) + list(reversed(times)),
+            y=list(bands[0.95]) + list(reversed(bands[0.05])),
+            fill="toself",
+            fillcolor="rgba(147, 197, 253, 0.22)",
+            line=dict(color="rgba(0,0,0,0)"),
+            name="5-95%",
+            hoverinfo="skip",
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=list(times) + list(reversed(times)),
+            y=list(bands[0.75]) + list(reversed(bands[0.25])),
+            fill="toself",
+            fillcolor="rgba(59, 130, 246, 0.35)",
+            line=dict(color="rgba(0,0,0,0)"),
+            name="25-75%",
+            hoverinfo="skip",
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=times,
+            y=bands[0.50],
+            mode="lines",
+            line=dict(color="#1e3a8a", width=2.8),
+            name="Median",
+        )
+    )
 
     fig.update_layout(
         title=title or f"Distribution over time — {key}",
@@ -500,12 +534,21 @@ def create_cross_section_plot(
     values = aligned_df.loc[nearest].dropna().values
 
     fig = go.Figure()
-    fig.add_trace(go.Histogram(
-        x=values, nbinsx=35, name="Active simulations",
-        marker_color="#3b82f6", opacity=0.75,
-    ))
-    fig.add_vline(x=float(np.median(values)), line=dict(color="#1e3a8a", width=2, dash="dash"),
-                  annotation_text="median", annotation_position="top right")
+    fig.add_trace(
+        go.Histogram(
+            x=values,
+            nbinsx=35,
+            name="Active simulations",
+            marker_color="#3b82f6",
+            opacity=0.75,
+        )
+    )
+    fig.add_vline(
+        x=float(np.median(values)),
+        line=dict(color="#1e3a8a", width=2, dash="dash"),
+        annotation_text="median",
+        annotation_position="top right",
+    )
     fig.update_layout(
         title=title or f"{key} distribution at {nearest:%Y-%m-%d}",
         template="plotly_white",
@@ -538,50 +581,58 @@ def create_custom_scatter(
     if color_col and color_col in summary_df.columns:
         # Color all points by the chosen dimension (selected still get emphasis)
         colors = summary_df[color_col]
-        fig.add_trace(go.Scatter(
-            x=summary_df[x_col],
-            y=summary_df[y_col],
-            mode="markers",
-            marker=dict(
-                color=colors,
-                colorscale="Viridis",
-                size=6,
-                opacity=0.75,
-                colorbar=dict(title=color_col, thickness=10),
-            ),
-            name="All active",
-            hovertemplate=f"%{{x:,.0f}} / %{{y:,.0f}}<br>{color_col}: %{{marker.color:.2f}}<extra></extra>",
-        ))
+        fig.add_trace(
+            go.Scatter(
+                x=summary_df[x_col],
+                y=summary_df[y_col],
+                mode="markers",
+                marker=dict(
+                    color=colors,
+                    colorscale="Viridis",
+                    size=6,
+                    opacity=0.75,
+                    colorbar=dict(title=color_col, thickness=10),
+                ),
+                name="All active",
+                hovertemplate=f"%{{x:,.0f}} / %{{y:,.0f}}<br>{color_col}: %{{marker.color:.2f}}<extra></extra>",
+            )
+        )
         # Overlay selected on top with outline
         if selected_mask.any():
-            fig.add_trace(go.Scatter(
-                x=summary_df.loc[selected_mask, x_col],
-                y=summary_df.loc[selected_mask, y_col],
-                mode="markers",
-                marker=dict(color="#1e40af", size=9, line=dict(width=1.5, color="white")),
-                name="Highlighted",
-                hovertemplate="<b>Selected</b><br>%{x:,.0f} / %{y:,.0f}<extra></extra>",
-            ))
+            fig.add_trace(
+                go.Scatter(
+                    x=summary_df.loc[selected_mask, x_col],
+                    y=summary_df.loc[selected_mask, y_col],
+                    mode="markers",
+                    marker=dict(color="#1e40af", size=9, line=dict(width=1.5, color="white")),
+                    name="Highlighted",
+                    hovertemplate="<b>Selected</b><br>%{x:,.0f} / %{y:,.0f}<extra></extra>",
+                )
+            )
     else:
         # Original behavior (no color dimension)
         non = ~selected_mask
-        fig.add_trace(go.Scatter(
-            x=summary_df.loc[non, x_col],
-            y=summary_df.loc[non, y_col],
-            mode="markers",
-            marker=dict(color="#9ca3af", size=5, opacity=0.6),
-            name="Active (not highlighted)",
-            hovertemplate="%{x:,.0f} / %{y:,.0f}<extra></extra>",
-        ))
-        if selected_mask.any():
-            fig.add_trace(go.Scatter(
-                x=summary_df.loc[selected_mask, x_col],
-                y=summary_df.loc[selected_mask, y_col],
+        fig.add_trace(
+            go.Scatter(
+                x=summary_df.loc[non, x_col],
+                y=summary_df.loc[non, y_col],
                 mode="markers",
-                marker=dict(color="#1e40af", size=8, line=dict(width=1, color="white")),
-                name="Highlighted",
-                hovertemplate="<b>Selected</b><br>%{x:,.0f} / %{y:,.0f}<extra></extra>",
-            ))
+                marker=dict(color="#9ca3af", size=5, opacity=0.6),
+                name="Active (not highlighted)",
+                hovertemplate="%{x:,.0f} / %{y:,.0f}<extra></extra>",
+            )
+        )
+        if selected_mask.any():
+            fig.add_trace(
+                go.Scatter(
+                    x=summary_df.loc[selected_mask, x_col],
+                    y=summary_df.loc[selected_mask, y_col],
+                    mode="markers",
+                    marker=dict(color="#1e40af", size=8, line=dict(width=1, color="white")),
+                    name="Highlighted",
+                    hovertemplate="<b>Selected</b><br>%{x:,.0f} / %{y:,.0f}<extra></extra>",
+                )
+            )
 
     fig.update_layout(
         title=title or f"{x_col} vs {y_col}" + (f" (colored by {color_col})" if color_col else ""),
@@ -601,21 +652,27 @@ def create_correlation_heatmap(
 ) -> go.Figure:
     """Plotly heatmap of correlations among numeric columns in the summary."""
     if numeric_cols is None:
-        numeric_cols = [c for c in summary_df.columns if c != "sim_idx" and pd.api.types.is_numeric_dtype(summary_df[c])]
+        numeric_cols = [
+            c
+            for c in summary_df.columns
+            if c != "sim_idx" and pd.api.types.is_numeric_dtype(summary_df[c])
+        ]
     if len(numeric_cols) < 2:
         return go.Figure().update_layout(title="Need at least 2 numeric columns", height=height)
 
     corr = summary_df[numeric_cols].corr(numeric_only=True)
 
-    fig = go.Figure(data=go.Heatmap(
-        z=corr.values,
-        x=list(corr.columns),
-        y=list(corr.index),
-        colorscale="RdBu",
-        zmid=0,
-        colorbar=dict(title="corr"),
-        hovertemplate="%{x}<br>%{y}<br>ρ=%{z:.2f}<extra></extra>",
-    ))
+    fig = go.Figure(
+        data=go.Heatmap(
+            z=corr.values,
+            x=list(corr.columns),
+            y=list(corr.index),
+            colorscale="RdBu",
+            zmid=0,
+            colorbar=dict(title="corr"),
+            hovertemplate="%{x}<br>%{y}<br>ρ=%{z:.2f}<extra></extra>",
+        )
+    )
     fig.update_layout(
         title=title,
         template="plotly_white",
@@ -658,7 +715,6 @@ def render_simulation_analysis(
         st.info("No simulation results to visualize.")
         return
 
-
     # Lightweight but more complete caching (finishes plan item)
     results_key = f"{key_prefix}_prep_{id(results)}_{len(results)}"
     if results_key in st.session_state:
@@ -688,7 +744,9 @@ def render_simulation_analysis(
     with st.expander("🔍 Filters — narrow the active set", expanded=False):
         active_mask = np.ones(len(results), dtype=bool)
         # Pick 1-2 high-signal final columns for sliders
-        candidate_cols = [c for c in summary.columns if c.startswith("final_") or c.startswith("custom:")]
+        candidate_cols = [
+            c for c in summary.columns if c.startswith("final_") or c.startswith("custom:")
+        ]
 
         # Quick filter buttons (finishes plan item)
         qf1, qf2, qf3, qf4 = st.columns(4)
@@ -742,13 +800,20 @@ def render_simulation_analysis(
 
     # --- Selection via dataframe + quick picks ---
     st.subheader("Simulation Browser & Highlights")
-    st.caption("Select rows (or use quick-pick buttons) to highlight their paths in the charts below.")
+    st.caption(
+        "Select rows (or use quick-pick buttons) to highlight their paths in the charts below."
+    )
 
     quick_cols = st.columns(6)
     if quick_cols[0].button("5 Best (final)", key=f"{key_prefix}_best"):
         if not active_summary.empty:
             # Pick the first final_* column that looks like a wealth metric
-            wealth_cols = [c for c in active_summary.columns if c.startswith("final_") and any(w in c.lower() for w in ("cash", "value", "portfolio", "wealth"))]
+            wealth_cols = [
+                c
+                for c in active_summary.columns
+                if c.startswith("final_")
+                and any(w in c.lower() for w in ("cash", "value", "portfolio", "wealth"))
+            ]
             final_cols = [c for c in active_summary.columns if c.startswith("final_")]
             sort_col = wealth_cols[0] if wealth_cols else (final_cols[0] if final_cols else None)
             if sort_col:
@@ -757,7 +822,12 @@ def render_simulation_analysis(
                 st.rerun()
     if quick_cols[1].button("5 Worst", key=f"{key_prefix}_worst"):
         if not active_summary.empty:
-            wealth_cols = [c for c in active_summary.columns if c.startswith("final_") and any(w in c.lower() for w in ("cash", "value", "portfolio", "wealth"))]
+            wealth_cols = [
+                c
+                for c in active_summary.columns
+                if c.startswith("final_")
+                and any(w in c.lower() for w in ("cash", "value", "portfolio", "wealth"))
+            ]
             final_cols = [c for c in active_summary.columns if c.startswith("final_")]
             sort_col = wealth_cols[0] if wealth_cols else (final_cols[0] if final_cols else None)
             if sort_col:
@@ -770,15 +840,26 @@ def render_simulation_analysis(
     if quick_cols[3].button("Random 8", key=f"{key_prefix}_rand"):
         if active_indices:
             rng = np.random.default_rng(42)
-            st.session_state[f"{key_prefix}_selected"] = sorted(rng.choice(active_indices, size=min(8, len(active_indices)), replace=False).tolist())
+            st.session_state[f"{key_prefix}_selected"] = sorted(
+                rng.choice(active_indices, size=min(8, len(active_indices)), replace=False).tolist()
+            )
             st.rerun()
     if quick_cols[4].button("5 Median", key=f"{key_prefix}_median"):
         if not active_summary.empty:
-            wealth_cols = [c for c in active_summary.columns if c.startswith("final_") and any(w in c.lower() for w in ("cash", "value", "portfolio", "wealth"))]
+            wealth_cols = [
+                c
+                for c in active_summary.columns
+                if c.startswith("final_")
+                and any(w in c.lower() for w in ("cash", "value", "portfolio", "wealth"))
+            ]
             final_cols = [c for c in active_summary.columns if c.startswith("final_")]
             sort_col = wealth_cols[0] if wealth_cols else (final_cols[0] if final_cols else None)
             if sort_col:
-                med_idx = active_summary[sort_col].sort_values().index[len(active_summary) // 2 - 2 : len(active_summary) // 2 + 3]
+                med_idx = (
+                    active_summary[sort_col]
+                    .sort_values()
+                    .index[len(active_summary) // 2 - 2 : len(active_summary) // 2 + 3]
+                )
                 med_sims = active_summary.loc[med_idx, "sim_idx"].astype(int).tolist()
                 st.session_state[f"{key_prefix}_selected"] = sorted(set(med_sims))
                 st.rerun()
@@ -787,7 +868,14 @@ def render_simulation_analysis(
 
     # The powerful dataframe selector
     if not active_summary.empty:
-        display_cols = [c for c in active_summary.columns if c in ("sim_idx", "n_events") or c.startswith("final_") or c.startswith("path_") or c.startswith("custom:")][:9]
+        display_cols = [
+            c
+            for c in active_summary.columns
+            if c in ("sim_idx", "n_events")
+            or c.startswith("final_")
+            or c.startswith("path_")
+            or c.startswith("custom:")
+        ][:9]
         event = st.dataframe(
             active_summary[display_cols],
             key=f"{key_prefix}_browser",
@@ -838,10 +926,14 @@ def render_simulation_analysis(
         )
 
     if auto_reduced:
-        st.caption(f"Large run detected ({n_sims} simulations). Background lines auto-reduced for performance. Adjust the slider above if needed.")
+        st.caption(
+            f"Large run detected ({n_sims} simulations). Background lines auto-reduced for performance. Adjust the slider above if needed."
+        )
 
     # Metric chooser (prefers wealth-like)
-    metric_options = [k for k in all_keys if any(w in k.lower() for w in ("cash", "value", "portfolio"))] or all_keys[:5]
+    metric_options = [
+        k for k in all_keys if any(w in k.lower() for w in ("cash", "value", "portfolio"))
+    ] or all_keys[:5]
     chosen_key = st.selectbox(
         "Primary metric for paths & fans",
         options=metric_options or [primary],
@@ -872,16 +964,26 @@ def render_simulation_analysis(
             if not aligned_for_fan.empty and 0.50 in bands:
                 times = bands[0.50].index
                 fan = go.Figure()
-                fan.add_trace(go.Scatter(
-                    x=list(times) + list(reversed(times)),
-                    y=list(bands[0.75]) + list(reversed(bands[0.25])),
-                    fill="toself", fillcolor="rgba(59, 130, 246, 0.35)",
-                    line=dict(color="rgba(0,0,0,0)"), name="25-75%", hoverinfo="skip",
-                ))
-                fan.add_trace(go.Scatter(
-                    x=times, y=bands[0.50], mode="lines",
-                    line=dict(color="#1e3a8a", width=2.8), name="Median",
-                ))
+                fan.add_trace(
+                    go.Scatter(
+                        x=list(times) + list(reversed(times)),
+                        y=list(bands[0.75]) + list(reversed(bands[0.25])),
+                        fill="toself",
+                        fillcolor="rgba(59, 130, 246, 0.35)",
+                        line=dict(color="rgba(0,0,0,0)"),
+                        name="25-75%",
+                        hoverinfo="skip",
+                    )
+                )
+                fan.add_trace(
+                    go.Scatter(
+                        x=times,
+                        y=bands[0.50],
+                        mode="lines",
+                        line=dict(color="#1e3a8a", width=2.8),
+                        name="Median",
+                    )
+                )
                 fan.update_layout(
                     title=f"Distribution over time — {chosen_key} (interquartile focus)",
                     template="plotly_white",
@@ -893,7 +995,9 @@ def render_simulation_analysis(
 
     # --- Time Scrubber (the practical "click on a point" experience) ---
     st.subheader("🔎 Time Scrubber — Inspect & Highlight Paths at Any Moment")
-    st.caption("This is the closest equivalent to clicking a data point on the time-series plot. Choose a moment, then highlight the simulations that were near a chosen value at that exact time.")
+    st.caption(
+        "This is the closest equivalent to clicking a data point on the time-series plot. Choose a moment, then highlight the simulations that were near a chosen value at that exact time."
+    )
 
     if active_indices:
         aligned = align_paths_to_grid([results[i] for i in active_indices], key=chosen_key)
@@ -911,7 +1015,9 @@ def render_simulation_analysis(
             st.plotly_chart(cross, width="stretch", key=f"{key_prefix}_cross")
 
             # Value highlighter — use the exact nearest time that the cross-section used
-            nearest_ts = min(aligned.index, key=lambda t: abs((t.to_pydatetime() - chosen_t).total_seconds()))
+            nearest_ts = min(
+                aligned.index, key=lambda t: abs((t.to_pydatetime() - chosen_t).total_seconds())
+            )
             vals_at_t = aligned.loc[nearest_ts].dropna()
             if len(vals_at_t) > 1:
                 vmin, vmax = float(vals_at_t.min()), float(vals_at_t.max())
@@ -924,7 +1030,10 @@ def render_simulation_analysis(
                     key=f"{key_prefix}_target_val",
                 )
                 tol_pct = st.slider("Tolerance (± %)", 1, 25, 8, key=f"{key_prefix}_tol")
-                if st.button("Highlight paths near this value at this time", key=f"{key_prefix}_highlight_near"):
+                if st.button(
+                    "Highlight paths near this value at this time",
+                    key=f"{key_prefix}_highlight_near",
+                ):
                     lower = target * (1 - tol_pct / 100)
                     upper = target * (1 + tol_pct / 100)
                     matches = [int(i) for i, v in vals_at_t.items() if lower <= v <= upper]
@@ -938,7 +1047,11 @@ def render_simulation_analysis(
     # --- Custom Plot Builder ---
     with st.expander("🛠️ Custom Plot Builder — compare any two metrics", expanded=False):
         if not active_summary.empty:
-            num_cols = [c for c in active_summary.columns if c != "sim_idx" and pd.api.types.is_numeric_dtype(active_summary[c])]
+            num_cols = [
+                c
+                for c in active_summary.columns
+                if c != "sim_idx" and pd.api.types.is_numeric_dtype(active_summary[c])
+            ]
             c1, c2, c3 = st.columns(3)
             plot_type = c1.selectbox(
                 "Plot type",
@@ -957,27 +1070,35 @@ def render_simulation_analysis(
             sel_mask = np.isin(summary["sim_idx"].values, selected)
 
             if plot_type == "Scatter":
-                y = st.selectbox("Y axis", num_cols, index=min(1, len(num_cols)-1), key=f"{key_prefix}_cy")
-                scatter = create_custom_scatter(active_summary, x, y, sel_mask, color_col=color_col, height=340)
+                y = st.selectbox(
+                    "Y axis", num_cols, index=min(1, len(num_cols) - 1), key=f"{key_prefix}_cy"
+                )
+                scatter = create_custom_scatter(
+                    active_summary, x, y, sel_mask, color_col=color_col, height=340
+                )
                 st.plotly_chart(scatter, width="stretch", key=f"{key_prefix}_custom_scatter")
 
             elif plot_type == "Histogram (X)":
                 fig = go.Figure()
-                fig.add_trace(go.Histogram(
-                    x=active_summary[x],
-                    nbinsx=35,
-                    name="Active",
-                    marker_color="#3b82f6",
-                    opacity=0.7,
-                ))
-                if sel_mask.any():
-                    fig.add_trace(go.Histogram(
-                        x=active_summary.loc[sel_mask, x],
+                fig.add_trace(
+                    go.Histogram(
+                        x=active_summary[x],
                         nbinsx=35,
-                        name="Highlighted",
-                        marker_color="#1e40af",
-                        opacity=0.85,
-                    ))
+                        name="Active",
+                        marker_color="#3b82f6",
+                        opacity=0.7,
+                    )
+                )
+                if sel_mask.any():
+                    fig.add_trace(
+                        go.Histogram(
+                            x=active_summary.loc[sel_mask, x],
+                            nbinsx=35,
+                            name="Highlighted",
+                            marker_color="#1e40af",
+                            opacity=0.85,
+                        )
+                    )
                 fig.update_layout(
                     title=f"Histogram of {x}",
                     template="plotly_white",
@@ -990,19 +1111,23 @@ def render_simulation_analysis(
             elif plot_type == "Box plot (by selection)":
                 # Simple box: highlighted vs others
                 fig = go.Figure()
-                fig.add_trace(go.Box(
-                    y=active_summary[x],
-                    name="Active (not highlighted)",
-                    marker_color="#9ca3af",
-                    boxpoints=False,
-                ))
+                fig.add_trace(
+                    go.Box(
+                        y=active_summary[x],
+                        name="Active (not highlighted)",
+                        marker_color="#9ca3af",
+                        boxpoints=False,
+                    )
+                )
                 if sel_mask.any():
-                    fig.add_trace(go.Box(
-                        y=active_summary.loc[sel_mask, x],
-                        name="Highlighted",
-                        marker_color="#1e40af",
-                        boxpoints="outliers",
-                    ))
+                    fig.add_trace(
+                        go.Box(
+                            y=active_summary.loc[sel_mask, x],
+                            name="Highlighted",
+                            marker_color="#1e40af",
+                            boxpoints="outliers",
+                        )
+                    )
                 fig.update_layout(
                     title=f"Box plot of {x} (highlighted vs rest)",
                     template="plotly_white",
@@ -1011,7 +1136,10 @@ def render_simulation_analysis(
                 )
                 st.plotly_chart(fig, width="stretch", key=f"{key_prefix}_custom_box")
 
-            if st.button("Show correlation heatmap of all numeric columns (active)", key=f"{key_prefix}_corr_btn"):
+            if st.button(
+                "Show correlation heatmap of all numeric columns (active)",
+                key=f"{key_prefix}_corr_btn",
+            ):
                 hm = create_correlation_heatmap(active_summary)
                 st.plotly_chart(hm, width="stretch", key=f"{key_prefix}_corr")
 

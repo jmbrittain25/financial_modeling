@@ -35,7 +35,9 @@ def demo_sampling():
 
     mkt_d = make_stock_market_driver(initial_value=100.0)
     p3 = sample_driver_path(mkt_d, start, end, freq="MS", n_paths=2, seed=99)
-    print(f"Equity market (GBM) paths generated. Final values: {[round(v,1) for v in p3['paths'][0][-3:]]}")
+    print(
+        f"Equity market (GBM) paths generated. Final values: {[round(v, 1) for v in p3['paths'][0][-3:]]}"
+    )
 
 
 def demo_full_scenario_with_drivers():
@@ -65,8 +67,14 @@ def demo_full_scenario_with_drivers():
 
     res = run_single(cfg, seed=123)
     print("Run complete.")
-    print("Final state keys affected by drivers:", {k: round(v, 2) if isinstance(v, (int, float)) else v
-                                                    for k, v in res.final_state.items() if k in ("mortgage_rate", "inflation", "portfolio")})
+    print(
+        "Final state keys affected by drivers:",
+        {
+            k: round(v, 2) if isinstance(v, (int, float)) else v
+            for k, v in res.final_state.items()
+            if k in ("mortgage_rate", "inflation", "portfolio")
+        },
+    )
 
 
 if __name__ == "__main__":

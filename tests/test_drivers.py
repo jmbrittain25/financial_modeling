@@ -131,7 +131,7 @@ def test_discrete_rate_driver_produces_step_function():
     p = sample_driver_path(d, start, end, freq="MS", n_paths=1, seed=123)
     values = p["paths"][0]
     # With quarterly updates, we should see long flat stretches in monthly sampling
-    changes = sum(1 for i in range(1, len(values)) if abs(values[i] - values[i-1]) > 1e-9)
+    changes = sum(1 for i in range(1, len(values)) if abs(values[i] - values[i - 1]) > 1e-9)
     assert changes <= 3  # at most a few changes
 
 
@@ -263,7 +263,9 @@ def test_discrete_rate_driver_affects_variable_rate_loan():
     res = run_single(cfg, seed=7)
     rates_seen = [e.metadata.get("rate") for e in res.events if "rate" in e.metadata]
     # We should see the rate change at least once
-    assert len(set(rates_seen)) >= 1 or len(rates_seen) > 3  # at least some variation or multiple payments
+    assert (
+        len(set(rates_seen)) >= 1 or len(rates_seen) > 3
+    )  # at least some variation or multiple payments
 
 
 def test_multiple_external_drivers_do_not_interfere():
@@ -311,7 +313,11 @@ def test_driver_seed_reproducibility_end_to_end():
             initial_state={"val": 1000.0},
             external_drivers=[
                 ContinuousGBMDriver(
-                    name="g", target_state_key="val", drift=0.05, volatility=0.12, initial_value=1000.0
+                    name="g",
+                    target_state_key="val",
+                    drift=0.05,
+                    volatility=0.12,
+                    initial_value=1000.0,
                 )
             ],
             event_builders=[
@@ -369,9 +375,16 @@ def test_all_driver_types_roundtrip_through_scenario_json():
                 timing=IntervalTiming(interval=timedelta(days=90)),
             ),
             ConstantDriver(name="c", target_state_key="c", value=99.0),
-            ContinuousGBMDriver(name="g", target_state_key="g", drift=0.1, volatility=0.2, initial_value=50),
+            ContinuousGBMDriver(
+                name="g", target_state_key="g", drift=0.1, volatility=0.2, initial_value=50
+            ),
             ContinuousMeanRevertDriver(
-                name="m", target_state_key="m", long_term_mean=0.03, speed=0.5, volatility=0.01, initial_value=0.04
+                name="m",
+                target_state_key="m",
+                long_term_mean=0.03,
+                speed=0.5,
+                volatility=0.01,
+                initial_value=0.04,
             ),
         ],
     )
@@ -399,6 +412,7 @@ def test_driver_library_style_dict_roundtrip():
 # =============================================================================
 # Legacy test moved here for consolidation (originally lived in test_scenarios.py)
 # =============================================================================
+
 
 def test_discrete_rate_driver_materialization():
     """A DiscreteRateDriver must expand into a RateChangeValue builder that mutates state."""

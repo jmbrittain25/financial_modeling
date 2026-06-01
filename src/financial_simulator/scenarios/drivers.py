@@ -52,7 +52,9 @@ def create_external_driver(data: dict[str, Any] | AnyExternalDriver) -> AnyExter
             "timing": {"type": "Interval", "interval": "P90D"},
         })
     """
-    if isinstance(data, (DiscreteRateDriver, ConstantDriver, ContinuousGBMDriver, ContinuousMeanRevertDriver)):
+    if isinstance(
+        data, (DiscreteRateDriver, ConstantDriver, ContinuousGBMDriver, ContinuousMeanRevertDriver)
+    ):
         return data
     if isinstance(data, dict):
         # Normalize nested dist / timing using core factories (defensive, cheap)
@@ -68,6 +70,7 @@ def create_external_driver(data: dict[str, Any] | AnyExternalDriver) -> AnyExter
 # -----------------------------------------------------------------------------
 # Path Sampling (the "sample over time" capability)
 # -----------------------------------------------------------------------------
+
 
 def sample_driver_path(
     driver: AnyExternalDriver,
@@ -106,9 +109,7 @@ def sample_driver_path(
         paths = [[val] * len(times) for _ in range(n_paths)]
     elif isinstance(driver, ContinuousGBMDriver):
         paths = [
-            _sample_gbm_path(
-                driver.initial_value, driver.drift, driver.volatility, times, rng
-            )
+            _sample_gbm_path(driver.initial_value, driver.drift, driver.volatility, times, rng)
             for _ in range(n_paths)
         ]
     elif isinstance(driver, ContinuousMeanRevertDriver):

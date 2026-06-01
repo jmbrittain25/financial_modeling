@@ -11,6 +11,7 @@ import pytest
 
 try:
     import plotly  # noqa: F401
+
     HAS_PLOTLY = True
 except Exception:
     HAS_PLOTLY = False
@@ -51,7 +52,9 @@ def test_plot_driver_preview_does_not_crash_and_returns_figure():
 def test_plot_driver_preview_mean_path_is_somewhere_in_the_fan():
     """The bold mean line should be between the min and max of the sampled paths at every point."""
     d = make_inflation_driver(initial_value=1.0)
-    fig = plot_driver_preview(d, start=datetime(2026, 1, 1), end=datetime(2026, 6, 1), n_paths=6, seed=7)
+    fig = plot_driver_preview(
+        d, start=datetime(2026, 1, 1), end=datetime(2026, 6, 1), n_paths=6, seed=7
+    )
 
     # Find the mean trace (we name it "Mean path")
     mean_y = None

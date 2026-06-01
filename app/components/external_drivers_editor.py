@@ -201,18 +201,44 @@ def render_external_drivers_editor(
                     )
 
                 elif isinstance(drv, ContinuousGBMDriver):
-                    new_name = st.text_input("Name", value=drv.name, key=f"{key_prefix}_gbm_name_{idx}")
-                    new_target = st.text_input("Target State Key", value=drv.target_state_key, key=f"{key_prefix}_gbm_target_{idx}")
+                    new_name = st.text_input(
+                        "Name", value=drv.name, key=f"{key_prefix}_gbm_name_{idx}"
+                    )
+                    new_target = st.text_input(
+                        "Target State Key",
+                        value=drv.target_state_key,
+                        key=f"{key_prefix}_gbm_target_{idx}",
+                    )
 
                     c1, c2, c3 = st.columns(3)
-                    new_drift = c1.number_input("Drift (annual)", value=drv.drift, step=0.01, format="%.3f", key=f"{key_prefix}_gbm_drift_{idx}")
-                    new_vol = c2.number_input("Volatility", value=drv.volatility, min_value=0.001, step=0.01, format="%.3f", key=f"{key_prefix}_gbm_vol_{idx}")
-                    new_init = c3.number_input("Initial Value", value=drv.initial_value, step=1000.0, key=f"{key_prefix}_gbm_init_{idx}")
+                    new_drift = c1.number_input(
+                        "Drift (annual)",
+                        value=drv.drift,
+                        step=0.01,
+                        format="%.3f",
+                        key=f"{key_prefix}_gbm_drift_{idx}",
+                    )
+                    new_vol = c2.number_input(
+                        "Volatility",
+                        value=drv.volatility,
+                        min_value=0.001,
+                        step=0.01,
+                        format="%.3f",
+                        key=f"{key_prefix}_gbm_vol_{idx}",
+                    )
+                    new_init = c3.number_input(
+                        "Initial Value",
+                        value=drv.initial_value,
+                        step=1000.0,
+                        key=f"{key_prefix}_gbm_init_{idx}",
+                    )
 
                     try:
                         preview = sample_driver_path(drv, n_paths=4, seed=42)
                         st.caption("Live sample paths (preview)")
-                        st.text(f"Terminal mean: {preview['summary']['mean_terminal']:.2f} | std: {preview['summary']['std_terminal']:.2f}")
+                        st.text(
+                            f"Terminal mean: {preview['summary']['mean_terminal']:.2f} | std: {preview['summary']['std_terminal']:.2f}"
+                        )
                     except Exception:
                         pass
 
@@ -222,18 +248,49 @@ def render_external_drivers_editor(
                         drift=float(new_drift),
                         volatility=float(new_vol),
                         initial_value=float(new_init),
-                        metadata=getattr(drv, 'metadata', {}),
+                        metadata=getattr(drv, "metadata", {}),
                     )
 
                 elif isinstance(drv, ContinuousMeanRevertDriver):
-                    new_name = st.text_input("Name", value=drv.name, key=f"{key_prefix}_mr_name_{idx}")
-                    new_target = st.text_input("Target State Key", value=drv.target_state_key, key=f"{key_prefix}_mr_target_{idx}")
+                    new_name = st.text_input(
+                        "Name", value=drv.name, key=f"{key_prefix}_mr_name_{idx}"
+                    )
+                    new_target = st.text_input(
+                        "Target State Key",
+                        value=drv.target_state_key,
+                        key=f"{key_prefix}_mr_target_{idx}",
+                    )
 
                     c1, c2 = st.columns(2)
-                    new_mean = c1.number_input("Long-term Mean", value=drv.long_term_mean, step=0.005, format="%.4f", key=f"{key_prefix}_mr_mean_{idx}")
-                    new_speed = c1.number_input("Reversion Speed", value=drv.speed, min_value=0.01, step=0.1, key=f"{key_prefix}_mr_speed_{idx}")
-                    new_vol = c2.number_input("Volatility", value=drv.volatility, min_value=0.0001, step=0.001, format="%.4f", key=f"{key_prefix}_mr_vol_{idx}")
-                    new_init = c2.number_input("Initial Value", value=drv.initial_value, step=0.01, format="%.4f", key=f"{key_prefix}_mr_init_{idx}")
+                    new_mean = c1.number_input(
+                        "Long-term Mean",
+                        value=drv.long_term_mean,
+                        step=0.005,
+                        format="%.4f",
+                        key=f"{key_prefix}_mr_mean_{idx}",
+                    )
+                    new_speed = c1.number_input(
+                        "Reversion Speed",
+                        value=drv.speed,
+                        min_value=0.01,
+                        step=0.1,
+                        key=f"{key_prefix}_mr_speed_{idx}",
+                    )
+                    new_vol = c2.number_input(
+                        "Volatility",
+                        value=drv.volatility,
+                        min_value=0.0001,
+                        step=0.001,
+                        format="%.4f",
+                        key=f"{key_prefix}_mr_vol_{idx}",
+                    )
+                    new_init = c2.number_input(
+                        "Initial Value",
+                        value=drv.initial_value,
+                        step=0.01,
+                        format="%.4f",
+                        key=f"{key_prefix}_mr_init_{idx}",
+                    )
 
                     try:
                         preview = sample_driver_path(drv, n_paths=4, seed=42)
@@ -249,7 +306,7 @@ def render_external_drivers_editor(
                         speed=float(new_speed),
                         volatility=float(new_vol),
                         initial_value=float(new_init),
-                        metadata=getattr(drv, 'metadata', {}),
+                        metadata=getattr(drv, "metadata", {}),
                     )
 
                 else:

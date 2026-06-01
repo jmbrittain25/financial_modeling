@@ -42,9 +42,11 @@ __all__ = [
 ]
 
 if _HAS_SIM_VIZ:
-    __all__.extend([
-        "render_simulation_analysis",
-        "discover_numeric_keys",
-        "build_summary_dataframe",
-        "create_spaghetti_plot",
-    ])
+    __all__.extend(
+        [
+            "render_simulation_analysis",
+            "discover_numeric_keys",
+            "build_summary_dataframe",
+            "create_spaghetti_plot",
+        ]
+    )

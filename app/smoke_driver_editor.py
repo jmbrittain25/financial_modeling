@@ -23,9 +23,11 @@ This is a standalone smoke test for the new driver component (Phase 2).
 if "demo_driver" not in st.session_state:
     st.session_state.demo_driver = make_interest_rate_driver()
 
+
 def handle_use(driver):
     st.session_state.demo_driver = driver
     st.toast(f"Driver captured: {driver.name}")
+
 
 driver = render_external_driver_editor(
     key_prefix="smoke_driver",

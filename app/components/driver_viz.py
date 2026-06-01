@@ -73,7 +73,7 @@ def plot_driver_preview(
                 x=times,
                 y=path,
                 mode="lines",
-                name=f"Path {i+1}" if n_paths <= 4 else None,
+                name=f"Path {i + 1}" if n_paths <= 4 else None,
                 line=dict(width=1.2, color="rgba(70,130,180,0.6)"),
                 showlegend=(n_paths <= 4),
             )
@@ -223,17 +223,35 @@ def render_external_driver_editor(
     defaults = get_default_driver_params(selected_type)
     if initial is not None and getattr(initial, "type", None) == selected_type:
         # Pull current values (best effort)
-        for fld in ("name", "target_state_key", "value", "drift", "volatility", "initial_value",
-                    "long_term_mean", "speed"):
+        for fld in (
+            "name",
+            "target_state_key",
+            "value",
+            "drift",
+            "volatility",
+            "initial_value",
+            "long_term_mean",
+            "speed",
+        ):
             if hasattr(initial, fld):
                 defaults[fld] = getattr(initial, fld)
         if hasattr(initial, "dist"):
-            defaults["dist"] = initial.dist.model_dump(mode="json") if hasattr(initial.dist, "model_dump") else initial.dist
+            defaults["dist"] = (
+                initial.dist.model_dump(mode="json")
+                if hasattr(initial.dist, "model_dump")
+                else initial.dist
+            )
         if hasattr(initial, "timing"):
-            defaults["timing"] = initial.timing.model_dump(mode="json") if hasattr(initial.timing, "model_dump") else initial.timing
+            defaults["timing"] = (
+                initial.timing.model_dump(mode="json")
+                if hasattr(initial.timing, "model_dump")
+                else initial.timing
+            )
 
     # Common fields
-    name = st.text_input("Driver Name", value=defaults.get("name", "my_driver"), key=f"{key_prefix}_name")
+    name = st.text_input(
+        "Driver Name", value=defaults.get("name", "my_driver"), key=f"{key_prefix}_name"
+    )
     target_key = st.text_input(
         "Target State Key (what the simulation reads)",
         value=defaults.get("target_state_key", "rate"),
@@ -260,32 +278,83 @@ def render_external_driver_editor(
         # Simple timing for MVP (Interval only; full AnyTiming can be added later)
         st.caption("Sampling Schedule (MVP: fixed interval)")
         days = st.number_input(
-            "Interval (days)", min_value=1, max_value=3650, value=90, step=30, key=f"{key_prefix}_interval_days"
+            "Interval (days)",
+            min_value=1,
+            max_value=3650,
+            value=90,
+            step=30,
+            key=f"{key_prefix}_interval_days",
         )
         params["timing"] = {"type": "Interval", "interval": f"P{int(days)}D"}
 
     elif selected_type == "constant":
         params["value"] = st.number_input(
-            "Constant Value", value=float(defaults.get("value", 1000.0)), step=100.0, key=f"{key_prefix}_value"
+            "Constant Value",
+            value=float(defaults.get("value", 1000.0)),
+            step=100.0,
+            key=f"{key_prefix}_value",
         )
 
     elif selected_type == "gbm_continuous":
         col1, col2, col3 = st.columns(3)
         with col1:
-            params["drift"] = col1.number_input("Drift (annual)", value=float(defaults.get("drift", 0.08)), step=0.01, format="%.3f", key=f"{key_prefix}_drift")
+            params["drift"] = col1.number_input(
+                "Drift (annual)",
+                value=float(defaults.get("drift", 0.08)),
+                step=0.01,
+                format="%.3f",
+                key=f"{key_prefix}_drift",
+            )
         with col2:
-            params["volatility"] = col2.number_input("Volatility (annual)", value=float(defaults.get("volatility", 0.18)), min_value=0.001, step=0.01, format="%.3f", key=f"{key_prefix}_vol")
+            params["volatility"] = col2.number_input(
+                "Volatility (annual)",
+                value=float(defaults.get("volatility", 0.18)),
+                min_value=0.001,
+                step=0.01,
+                format="%.3f",
+                key=f"{key_prefix}_vol",
+            )
         with col3:
-            params["initial_value"] = col3.number_input("Initial Value", value=float(defaults.get("initial_value", 100000.0)), step=1000.0, key=f"{key_prefix}_init")
+            params["initial_value"] = col3.number_input(
+                "Initial Value",
+                value=float(defaults.get("initial_value", 100000.0)),
+                step=1000.0,
+                key=f"{key_prefix}_init",
+            )
 
     elif selected_type == "mean_revert_continuous":
         col1, col2 = st.columns(2)
         with col1:
-            params["long_term_mean"] = col1.number_input("Long-term Mean", value=float(defaults.get("long_term_mean", 0.03)), step=0.005, format="%.4f", key=f"{key_prefix}_ltm")
-            params["speed"] = col1.number_input("Reversion Speed (theta)", value=float(defaults.get("speed", 0.8)), min_value=0.01, step=0.1, key=f"{key_prefix}_speed")
+            params["long_term_mean"] = col1.number_input(
+                "Long-term Mean",
+                value=float(defaults.get("long_term_mean", 0.03)),
+                step=0.005,
+                format="%.4f",
+                key=f"{key_prefix}_ltm",
+            )
+            params["speed"] = col1.number_input(
+                "Reversion Speed (theta)",
+                value=float(defaults.get("speed", 0.8)),
+                min_value=0.01,
+                step=0.1,
+                key=f"{key_prefix}_speed",
+            )
         with col2:
-            params["volatility"] = col2.number_input("Volatility", value=float(defaults.get("volatility", 0.006)), min_value=0.0001, step=0.001, format="%.4f", key=f"{key_prefix}_vol2")
-            params["initial_value"] = col2.number_input("Initial Value", value=float(defaults.get("initial_value", 0.03)), step=0.001, format="%.4f", key=f"{key_prefix}_init2")
+            params["volatility"] = col2.number_input(
+                "Volatility",
+                value=float(defaults.get("volatility", 0.006)),
+                min_value=0.0001,
+                step=0.001,
+                format="%.4f",
+                key=f"{key_prefix}_vol2",
+            )
+            params["initial_value"] = col2.number_input(
+                "Initial Value",
+                value=float(defaults.get("initial_value", 0.03)),
+                step=0.001,
+                format="%.4f",
+                key=f"{key_prefix}_init2",
+            )
 
     # Build the driver (validation happens inside create_)
     try:
@@ -323,13 +392,17 @@ def render_external_driver_editor(
     # Optional save-to-library style callback (for future SavedDriver or just "use this driver")
     if show_save_section:
         with st.expander("Save / Reuse this driver definition"):
-            st.caption("Drivers are saved inside the Scenario JSON. A reusable driver library can be added later (same pattern as distributions).")
+            st.caption(
+                "Drivers are saved inside the Scenario JSON. A reusable driver library can be added later (same pattern as distributions)."
+            )
             if st.button("Use this driver", key=f"{key_prefix}_use_btn"):
                 if on_save_callback:
                     on_save_callback(driver)
                 else:
                     st.json(driver.model_dump(mode="json"), expanded=False)
-                    st.success("Driver configuration ready (copy the JSON above or use the returned object).")
+                    st.success(
+                        "Driver configuration ready (copy the JSON above or use the returned object)."
+                    )
 
     return driver
 

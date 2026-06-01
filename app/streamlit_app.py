@@ -26,6 +26,7 @@ from app.components.template_gallery import render_template_gallery
 # Soft import for the rich interactive results visualization module (requires pandas + plotly)
 try:
     from app.components.simulation_viz import render_simulation_analysis
+
     HAS_SIM_VIZ = True
 except Exception:
     HAS_SIM_VIZ = False
@@ -339,12 +340,16 @@ elif nav == "📊 Run & Analyze":
     # This preserves powerful capabilities from both sides: individual sim selection, time scrubber +
     # value highlighting, custom plots, reactive filtering, etc.
     st.divider()
-    with st.expander("🔬 Deep Interactive Path Analysis (selection, time scrubber, custom plots)", expanded=False):
+    with st.expander(
+        "🔬 Deep Interactive Path Analysis (selection, time scrubber, custom plots)", expanded=False
+    ):
         if HAS_SIM_VIZ and render_simulation_analysis is not None:
             render_simulation_analysis(
                 results,
                 key_prefix="analyze",
-                default_metric="cumulative_cash" if any("cumulative_cash" in r.final_state for r in results) else None,
+                default_metric="cumulative_cash"
+                if any("cumulative_cash" in r.final_state for r in results)
+                else None,
                 height=480,
             )
         else:

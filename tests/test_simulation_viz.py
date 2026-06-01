@@ -398,17 +398,22 @@ def test_render_simulation_analysis_does_not_crash_on_small_input(monkeypatch):
         # Support widget methods used inside columns/expanders
         def button(self, *a, **k):
             return False
+
         def radio(self, *a, **k):
             return "Full (5-95% + 25-75%)"
+
         def selectbox(self, *a, **k):
             return None
+
         def slider(self, *a, **k):
             return (0.0, 10000.0)
 
     fake_st.expander = lambda *a, **k: FakeDelta()
+
     # Return proper context-manager column objects
     def _make_col():
         return FakeDelta()
+
     fake_st.columns = lambda n: [_make_col() for _ in range(n if isinstance(n, int) else 1)]
     fake_st.subheader = _noop
     fake_st.caption = _noop
@@ -445,7 +450,15 @@ def test_render_simulation_analysis_does_not_crash_on_small_input(monkeypatch):
     except Exception as e:
         err = str(e).lower()
         # Acceptable in smoke test: incomplete Streamlit mocks
-        if any(x in err for x in ["session_state", "object has no attribute", "not supported between", "context manager"]):
+        if any(
+            x in err
+            for x in [
+                "session_state",
+                "object has no attribute",
+                "not supported between",
+                "context manager",
+            ]
+        ):
             pass  # expected in this limited mock environment
         else:
             # Real bugs in viz logic should still fail the test
@@ -486,7 +499,9 @@ def test_streamlit_app_still_imports_after_viz_changes():
         if "NameError" in str(type(e)):
             raise AssertionError(f"Streamlit app has undefined name: {e}") from e
         else:
-            pytest.skip("Streamlit app import hit expected top-level execution issues in test environment")
+            pytest.skip(
+                "Streamlit app import hit expected top-level execution issues in test environment"
+            )
     except ModuleNotFoundError:
         # Acceptable when streamlit/pandas/plotly are not installed
         pytest.skip("Streamlit runtime dependencies not present")
@@ -545,11 +560,12 @@ def test_end_to_end_small_monte_carlo_through_viz_pipeline():
 
 # --- New tests for remaining plan items ---
 
+
 @pytest.mark.skipif(not HAS_VIZ_DEPS, reason="requires pandas + plotly")
 def test_verification_helpers_exist_and_return_reasonable_data():
     recs = get_large_run_recommendations(1200)
     assert "max_background" in recs
-    assert recs["max_background"] <= 50   # exactly 50 for 1200 sims with current heuristic
+    assert recs["max_background"] <= 50  # exactly 50 for 1200 sims with current heuristic
     assert "use_cache" in recs
 
     guidance = qualitative_wow_check_guidance()
@@ -561,6 +577,8 @@ def test_verification_helpers_exist_and_return_reasonable_data():
 def test_create_spaghetti_plot_short_history_uses_markers():
     # Force a result with very few points
     res = _make_simple_result(months=2)
-    fig = create_spaghetti_plot([res], key="cumulative_cash", active_mask=np.array([True]), selected_indices=[])
+    fig = create_spaghetti_plot(
+        [res], key="cumulative_cash", active_mask=np.array([True]), selected_indices=[]
+    )
     # Should still produce a figure without error
     assert fig is not None

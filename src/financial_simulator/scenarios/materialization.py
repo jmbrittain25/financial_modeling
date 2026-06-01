@@ -75,9 +75,7 @@ def build_engine(
         elif isinstance(driver, ContinuousGBMDriver):
             # Wire as a true continuous process (smooth stochastic evolution)
             proc = GBMContinuousProcess(
-                process=GeometricBrownianMotion(
-                    drift=driver.drift, volatility=driver.volatility
-                ),
+                process=GeometricBrownianMotion(drift=driver.drift, volatility=driver.volatility),
                 var=driver.target_state_key,
                 name=driver.name or f"external:{driver.target_state_key}",
             )
