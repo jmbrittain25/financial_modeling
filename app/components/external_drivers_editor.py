@@ -12,7 +12,7 @@ Uses sample_driver_path for live previews on continuous drivers.
 
 from __future__ import annotations
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Any
 
 from app.components.distribution_viz import render_distribution_picker
@@ -74,9 +74,13 @@ def get_default_mean_revert_driver() -> ContinuousMeanRevertDriver:
 def render_external_drivers_editor(
     key_prefix: str = "drivers",
     drivers: list[Any] | None = None,
+    scenario_start: datetime | None = None,
+    scenario_end: datetime | None = None,
 ) -> list[Any]:
     """
     Editor for external drivers list.
+
+    Pass scenario_start / scenario_end for accurate live path previews on continuous drivers.
     """
     import streamlit as st
 
@@ -97,14 +101,16 @@ def render_external_drivers_editor(
         use_container_width=True,
         help="For variable interest rates feeding loans",
     ):
-        drivers = drivers + [get_default_discrete_rate_driver()]
+        drivers.append(get_default_discrete_rate_driver())
+        st.toast("Added Discrete Rate Driver", icon="✅")
         st.rerun()
     if cols[1].button(
         "➕ Constant",
         key=f"{key_prefix}_add_const",
         use_container_width=True,
     ):
-        drivers = drivers + [get_default_constant_driver()]
+        drivers.append(get_default_constant_driver())
+        st.toast("Added Constant Driver", icon="✅")
         st.rerun()
     if cols[2].button(
         "➕ GBM (Markets)",
@@ -112,7 +118,8 @@ def render_external_drivers_editor(
         use_container_width=True,
         help="Equity-style growth with volatility",
     ):
-        drivers = drivers + [get_default_gbm_driver()]
+        drivers.append(get_default_gbm_driver())
+        st.toast("Added GBM Driver", icon="✅")
         st.rerun()
     if cols[3].button(
         "➕ Mean-Revert",
@@ -120,7 +127,8 @@ def render_external_drivers_editor(
         use_container_width=True,
         help="Inflation or rates with reversion to long-term mean",
     ):
-        drivers = drivers + [get_default_mean_revert_driver()]
+        drivers.append(get_default_mean_revert_driver())
+        st.toast("Added Mean-Revert Driver", icon="✅")
         st.rerun()
 
     if not drivers:
@@ -234,13 +242,15 @@ def render_external_drivers_editor(
                     )
 
                     try:
-                        preview = sample_driver_path(drv, n_paths=4, seed=42)
+                        eff_start = scenario_start or datetime(2026, 1, 1)
+                        eff_end = scenario_end or datetime(2031, 1, 1)
+                        preview = sample_driver_path(drv, start=eff_start, end=eff_end, n_paths=4, seed=42)
                         st.caption("Live sample paths (preview)")
                         st.text(
                             f"Terminal mean: {preview['summary']['mean_terminal']:.2f} | std: {preview['summary']['std_terminal']:.2f}"
                         )
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        st.caption(f"Preview unavailable ({type(e).__name__})")
 
                     drivers[idx] = ContinuousGBMDriver(
                         name=new_name,
@@ -293,11 +303,13 @@ def render_external_drivers_editor(
                     )
 
                     try:
-                        preview = sample_driver_path(drv, n_paths=4, seed=42)
+                        eff_start = scenario_start or datetime(2026, 1, 1)
+                        eff_end = scenario_end or datetime(2031, 1, 1)
+                        preview = sample_driver_path(drv, start=eff_start, end=eff_end, n_paths=4, seed=42)
                         st.caption("Live sample paths (preview)")
                         st.text(f"Terminal mean: {preview['summary']['mean_terminal']:.4f}")
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        st.caption(f"Preview unavailable ({type(e).__name__})")
 
                     drivers[idx] = ContinuousMeanRevertDriver(
                         name=new_name,

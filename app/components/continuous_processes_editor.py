@@ -77,15 +77,18 @@ def render_continuous_processes_editor(
     if cols[0].button(
         "➕ Simple Appreciation", key=f"{key_prefix}_add_app", use_container_width=True
     ):
-        processes = processes + [get_default_appreciation()]
+        processes.append(get_default_appreciation())
+        st.toast("Added Simple Appreciation", icon="✅")
         st.rerun()
     if cols[1].button(
         "➕ GBM (Stocks/Equity)", key=f"{key_prefix}_add_gbm", use_container_width=True
     ):
-        processes = processes + [get_default_gbm()]
+        processes.append(get_default_gbm())
+        st.toast("Added GBM Process", icon="✅")
         st.rerun()
     if cols[2].button("➕ Mean Reverting", key=f"{key_prefix}_add_mr", use_container_width=True):
-        processes = processes + [get_default_mean_reverting()]
+        processes.append(get_default_mean_reverting())
+        st.toast("Added Mean Reverting Process", icon="✅")
         st.rerun()
 
     if not processes:

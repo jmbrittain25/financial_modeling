@@ -136,8 +136,8 @@ def render_event_builder_list_editor(
         col = cols[i % 4]
         if col.button(preset["label"], key=f"{key_prefix}_preset_{i}", use_container_width=True):
             new_b = preset["builder"]()
-            builders = builders + [new_b]
-            st.success(f"Added: {new_b.name or 'event'}")
+            builders.append(new_b)
+            st.toast(f"Added: {new_b.name or 'event'}", icon="✅")
             st.rerun()
 
     st.divider()
@@ -158,8 +158,8 @@ def render_event_builder_list_editor(
                     st.session_state[f"{key_prefix}_editing_idx"] = idx
                     st.rerun()
                 if c3.button("📋 Dup", key=f"{key_prefix}_dup_{idx}", use_container_width=True):
-                    builders = builders + [eb.model_copy(deep=True)]
-                    st.success("Duplicated")
+                    builders.append(eb.model_copy(deep=True))
+                    st.toast("Duplicated", icon="📋")
                     st.rerun()
                 if c4.button("🗑️", key=f"{key_prefix}_del_{idx}", use_container_width=True):
                     to_delete.append(idx)
@@ -227,15 +227,15 @@ def render_event_builder_list_editor(
         v = render_value_generator_editor(key_prefix=f"{key_prefix}_custom_vg", initial=None)
 
         if st.button("Add Custom Event", type="primary", key=f"{key_prefix}_add_custom"):
-            builders = builders + [
+            builders.append(
                 ComposedEventBuilder(
                     name=custom_name or None,
                     timing=t,
                     value_gen=v,
                     metadata={"type": custom_meta},
                 )
-            ]
-            st.success("Custom event added.")
+            )
+            st.toast("Custom event added.", icon="✅")
             st.rerun()
 
     return builders

@@ -121,7 +121,8 @@ def render_custom_metrics_editor(
     for i, (mtype, label) in enumerate(quick_adds):
         if cols[i % 4].button(label, key=f"{key_prefix}_quick_{i}", use_container_width=True):
             new_metric = get_default_metric(mtype)
-            metrics = metrics + [new_metric]
+            metrics.append(new_metric)
+            st.toast(f"Added {label}", icon="✅")
             st.rerun()
 
     st.divider()
@@ -223,8 +224,8 @@ def render_custom_metrics_editor(
         if st.button("Add Metric", key=f"{key_prefix}_manual_add"):
             new_m = get_default_metric(mtype)
             new_m.name = name
-            metrics = metrics + [new_m]
-            st.success(f"Added {name}")
+            metrics.append(new_m)
+            st.toast(f"Added {name}", icon="✅")
             st.rerun()
 
     return metrics
