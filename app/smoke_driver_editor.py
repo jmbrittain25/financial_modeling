@@ -5,6 +5,12 @@ Run with:
     streamlit run app/smoke_driver_editor.py
 """
 
+import sys
+from pathlib import Path
+
+# Ensure project root is on path for `from app.components...` imports
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 import streamlit as st
 
 from app.components.driver_viz import render_external_driver_editor

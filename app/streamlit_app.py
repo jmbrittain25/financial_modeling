@@ -9,6 +9,15 @@ Run with:
     streamlit run app/streamlit_app.py
 """
 
+import sys
+from pathlib import Path
+
+# Ensure the project root is on sys.path so that
+# `from app.components.xxx import ...` works when running:
+#   streamlit run app/streamlit_app.py
+# from the repository root.
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 from datetime import datetime
 
 import streamlit as st
