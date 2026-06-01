@@ -207,14 +207,18 @@ def render_scenario_overview(cfg: ScenarioConfig, key_prefix: str = "overview"):
     if c1.button("📋 Copy Scenario JSON", key=f"{key_prefix}_copy_json"):
         st.code(cfg.to_json(indent=2), language="json")
     if c2.button("🔄 Duplicate Scenario", key=f"{key_prefix}_duplicate"):
-        st.session_state[f"{key_prefix}_duplicate_requested"] = True
-    if c3.button("📤 Export as File", key=f"{key_prefix}_export"):
+        st.session_state["current_scenario"] = cfg.clone()
+        st.toast("Scenario duplicated into the builder.", icon="🔄")
+        st.rerun()
+    # Always-offer export (avoids transient nested download_button anti-pattern)
+    with c3:
         st.download_button(
-            "Download scenario.json",
+            "📤 Export as File",
             data=cfg.to_json(),
             file_name=f"{cfg.name.replace(' ', '_')}.json",
             mime="application/json",
             key=f"{key_prefix}_download",
+            use_container_width=True,
         )
 
 

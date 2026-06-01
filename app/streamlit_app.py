@@ -150,9 +150,9 @@ with st.sidebar:
     if st.button("💾 Save Now", use_container_width=True, key="sidebar_save"):
         try:
             save_user_scenario(current)
-            st.success("Saved to your library!")
+            st.toast(f"Saved '{current.name}' to your library.", icon="💾")
         except Exception as e:
-            st.error(str(e))
+            st.error(f"Save failed: {e}")
 
     if st.button("📋 Duplicate", use_container_width=True, key="sidebar_dup"):
         dup = current.clone()
@@ -185,6 +185,9 @@ if nav == "🛠️ Scenario Builder":
 
     # Template Gallery (new nice UI)
     with st.expander("📥 Load from Template Gallery (recommended)", expanded=True):
+        st.caption(
+            "Templates are read-only starters. Load one, freely edit in the builder below, then use **💾 Save to My Library** (or the sidebar Save) to keep your customized version as a personal scenario. Committed templates are never overwritten."
+        )
         loaded = render_template_gallery(key_prefix="builder_templates")
         if loaded:
             st.session_state.current_scenario = loaded
@@ -244,6 +247,8 @@ if nav == "🛠️ Scenario Builder":
         current.external_drivers = render_external_drivers_editor(
             key_prefix="main_builder_drivers",
             drivers=current.external_drivers,
+            scenario_start=current.start,
+            scenario_end=current.end,
         )
 
     with st.expander(
@@ -300,7 +305,7 @@ if nav == "🛠️ Scenario Builder":
         if st.button("💾 Save to My Library", use_container_width=True):
             try:
                 save_user_scenario(current)
-                st.success(f"Saved '{current.name}' to your personal library!")
+                st.toast(f"Saved '{current.name}' to your personal library.", icon="💾")
             except Exception as e:
                 st.error(f"Failed to save: {e}")
 
@@ -387,8 +392,11 @@ elif nav == "🎲 Distribution Library":
         except Exception as e:
             st.error(str(e))
 
+    # Support "Load into Editor" from the My Scenarios / My Distributions library tab
+    pending_dist = st.session_state.pop("pending_distribution_to_load", None)
     render_distribution_picker(
         key_prefix="global_lib",
+        initial=pending_dist,
         library=st.session_state.lib,
         on_save_callback=save_to_lib,
     )
