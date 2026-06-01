@@ -201,22 +201,30 @@ class ConstantDriver(BaseModel):
 
 # Future driver kinds (stubs for UI extensibility; full support added in later phases)
 class ContinuousGBMDriver(BaseModel):
+    """Geometric Brownian Motion driver (for equity-style paths)."""
+
     type: Literal["gbm_continuous"] = "gbm_continuous"
     name: str
+    description: str = ""
     target_state_key: str
     drift: float
-    volatility: float
+    volatility: float = Field(gt=0)
     initial_value: float
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class ContinuousMeanRevertDriver(BaseModel):
+    """Mean-reverting driver (for inflation, interest rates, etc.)."""
+
     type: Literal["mean_revert_continuous"] = "mean_revert_continuous"
     name: str
+    description: str = ""
     target_state_key: str
     long_term_mean: float
-    speed: float
-    volatility: float
+    speed: float = Field(gt=0)
+    volatility: float = Field(gt=0)
     initial_value: float
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 AnyExternalDriver = Annotated[

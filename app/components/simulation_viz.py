@@ -31,7 +31,6 @@ import plotly.graph_objects as go
 
 from financial_simulator.core.simulation import SimulationResult
 
-
 # =============================================================================
 # Field discovery & summary construction
 # =============================================================================
@@ -72,7 +71,7 @@ def discover_numeric_keys(results: list[SimulationResult], sample: int = 20) -> 
 
     # Also peek at a bit of history for time-series candidates (first result is representative)
     if results:
-        for t, state in list(results[0].state_history.items())[:5]:
+        for _t, state in list(results[0].state_history.items())[:5]:
             for k, v in state.items():
                 if _is_numeric_scalar(v):
                     keys.add(k)
@@ -572,7 +571,7 @@ def create_custom_scatter(
             mode="markers",
             marker=dict(color="#9ca3af", size=5, opacity=0.6),
             name="Active (not highlighted)",
-            hovertemplate=f"%{{x:,.0f}} / %{{y:,.0f}}<extra></extra>",
+            hovertemplate="%{x:,.0f} / %{y:,.0f}<extra></extra>",
         ))
         if selected_mask.any():
             fig.add_trace(go.Scatter(
@@ -581,7 +580,7 @@ def create_custom_scatter(
                 mode="markers",
                 marker=dict(color="#1e40af", size=8, line=dict(width=1, color="white")),
                 name="Highlighted",
-                hovertemplate=f"<b>Selected</b><br>%{{x:,.0f}} / %{{y:,.0f}}<extra></extra>",
+                hovertemplate="<b>Selected</b><br>%{x:,.0f} / %{y:,.0f}<extra></extra>",
             ))
 
     fig.update_layout(
@@ -659,7 +658,6 @@ def render_simulation_analysis(
         st.info("No simulation results to visualize.")
         return
 
-    import hashlib
 
     # Lightweight but more complete caching (finishes plan item)
     results_key = f"{key_prefix}_prep_{id(results)}_{len(results)}"

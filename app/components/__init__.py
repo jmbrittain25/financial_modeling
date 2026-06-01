@@ -18,7 +18,7 @@ from .driver_viz import render_external_driver_editor
 # Heavy visualization helpers (Plotly + pandas) are optional at import time so that
 # tests and minimal environments that only need the distribution picker continue to work.
 try:
-    from .simulation_viz import (
+    from .simulation_viz import (  # noqa: F401 - re-exported conditionally below
         build_summary_dataframe,
         create_spaghetti_plot,
         discover_numeric_keys,

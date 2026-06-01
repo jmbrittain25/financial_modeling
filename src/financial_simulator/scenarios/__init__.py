@@ -18,15 +18,22 @@ All models use the core discriminated unions and round-trip cleanly to JSON.
 
 from __future__ import annotations
 
-from .materialization import build_engine, run_monte_carlo, run_single
-from .metrics import compute_all_metrics, compute_metric
-from .models import (
+from .drivers import (
     AnyExternalDriver,
     ConstantDriver,
     ContinuousGBMDriver,
     ContinuousMeanRevertDriver,
-    CustomMetric,
     DiscreteRateDriver,
+    create_external_driver,
+    make_inflation_driver,
+    make_interest_rate_driver,
+    make_stock_market_driver,
+    sample_driver_path,
+)
+from .materialization import build_engine, run_monte_carlo, run_single
+from .metrics import compute_all_metrics, compute_metric
+from .models import (
+    CustomMetric,
     DistributionLibrary,
     SavedDistribution,
     ScenarioConfig,
@@ -63,6 +70,11 @@ __all__ = [
     "ContinuousMeanRevertDriver",
     "AnyExternalDriver",
     "ScenarioConfig",
+    "create_external_driver",
+    "sample_driver_path",
+    "make_interest_rate_driver",
+    "make_inflation_driver",
+    "make_stock_market_driver",
     "compute_metric",
     "compute_all_metrics",
     "build_engine",

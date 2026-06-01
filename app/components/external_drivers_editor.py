@@ -1,20 +1,13 @@
 """
-<<<<<<< HEAD
-External Drivers Editor.
-
-Currently focused on DiscreteRateDriver (the most useful and commonly used pattern)
-with support for ConstantDriver. Other driver types are stubbed for future extension.
-=======
-External Drivers Editor (Phase 5+).
+External Drivers Editor (Phase 5+ integrated).
 
 Supports all four driver types:
-- DiscreteRateDriver (most common for variable rates feeding VariableRateLoanValue)
+- DiscreteRateDriver (variable rates feeding VariableRateLoanValue)
 - ConstantDriver
-- ContinuousGBMDriver (equity markets, growth with volatility)
-- ContinuousMeanRevertDriver (interest rates, inflation — realistic mean reversion)
+- ContinuousGBMDriver (equity markets / growth with volatility)
+- ContinuousMeanRevertDriver (inflation, interest rates with realistic reversion)
 
-Uses sample_driver_path for live previews on continuous types.
->>>>>>> 6c45ece (Integrate External Drivers with Advanced UI + Visualization (3-branch merge))
+Uses sample_driver_path for live previews on continuous drivers.
 """
 
 from __future__ import annotations
@@ -25,9 +18,6 @@ from typing import Any
 from app.components.distribution_viz import render_distribution_picker
 from financial_simulator.core.distributions import NormalDistribution
 from financial_simulator.core.event import IntervalTiming
-<<<<<<< HEAD
-from financial_simulator.scenarios import ConstantDriver, DiscreteRateDriver
-=======
 from financial_simulator.scenarios import (
     ConstantDriver,
     ContinuousGBMDriver,
@@ -35,12 +25,11 @@ from financial_simulator.scenarios import (
     DiscreteRateDriver,
 )
 from financial_simulator.scenarios.drivers import (
-    make_inflation_driver,
-    make_interest_rate_driver,
-    make_stock_market_driver,
+    make_inflation_driver,  # noqa: F401 - available for future quick-adds / examples
+    make_interest_rate_driver,  # noqa: F401
+    make_stock_market_driver,  # noqa: F401
     sample_driver_path,
 )
->>>>>>> 6c45ece (Integrate External Drivers with Advanced UI + Visualization (3-branch merge))
 
 
 def get_default_discrete_rate_driver() -> DiscreteRateDriver:
@@ -61,8 +50,6 @@ def get_default_constant_driver() -> ConstantDriver:
     )
 
 
-<<<<<<< HEAD
-=======
 def get_default_gbm_driver() -> ContinuousGBMDriver:
     return ContinuousGBMDriver(
         name="equity_market_driver",
@@ -84,7 +71,6 @@ def get_default_mean_revert_driver() -> ContinuousMeanRevertDriver:
     )
 
 
->>>>>>> 6c45ece (Integrate External Drivers with Advanced UI + Visualization (3-branch merge))
 def render_external_drivers_editor(
     key_prefix: str = "drivers",
     drivers: list[Any] | None = None,
@@ -103,32 +89,17 @@ def render_external_drivers_editor(
         "The most powerful use case is variable interest rates that feed into loans (VariableRateLoanValue)."
     )
 
-<<<<<<< HEAD
-    # Quick add
-    cols = st.columns(2)
-    if cols[0].button(
-        "➕ Add Discrete Rate Driver (recommended)",
-        key=f"{key_prefix}_add_rate",
-        use_container_width=True,
-=======
-    # Quick add - all four types
+    # Quick add - support for all 4 driver types
     cols = st.columns(4)
     if cols[0].button(
         "➕ Discrete Rate",
         key=f"{key_prefix}_add_rate",
         use_container_width=True,
         help="For variable interest rates feeding loans",
->>>>>>> 6c45ece (Integrate External Drivers with Advanced UI + Visualization (3-branch merge))
     ):
         drivers = drivers + [get_default_discrete_rate_driver()]
         st.rerun()
     if cols[1].button(
-<<<<<<< HEAD
-        "➕ Add Constant Driver", key=f"{key_prefix}_add_const", use_container_width=True
-    ):
-        drivers = drivers + [get_default_constant_driver()]
-        st.rerun()
-=======
         "➕ Constant",
         key=f"{key_prefix}_add_const",
         use_container_width=True,
@@ -151,7 +122,6 @@ def render_external_drivers_editor(
     ):
         drivers = drivers + [get_default_mean_revert_driver()]
         st.rerun()
->>>>>>> 6c45ece (Integrate External Drivers with Advanced UI + Visualization (3-branch merge))
 
     if not drivers:
         st.info(
@@ -229,8 +199,6 @@ def render_external_drivers_editor(
                         target_state_key=new_target,
                         value=float(new_val),
                     )
-<<<<<<< HEAD
-=======
 
                 elif isinstance(drv, ContinuousGBMDriver):
                     new_name = st.text_input("Name", value=drv.name, key=f"{key_prefix}_gbm_name_{idx}")
@@ -241,11 +209,9 @@ def render_external_drivers_editor(
                     new_vol = c2.number_input("Volatility", value=drv.volatility, min_value=0.001, step=0.01, format="%.3f", key=f"{key_prefix}_gbm_vol_{idx}")
                     new_init = c3.number_input("Initial Value", value=drv.initial_value, step=1000.0, key=f"{key_prefix}_gbm_init_{idx}")
 
-                    # Live preview using our sampling backend
                     try:
                         preview = sample_driver_path(drv, n_paths=4, seed=42)
                         st.caption("Live sample paths (preview)")
-                        # Simple text summary for now; full Plotly can be added via simulation_viz later
                         st.text(f"Terminal mean: {preview['summary']['mean_terminal']:.2f} | std: {preview['summary']['std_terminal']:.2f}")
                     except Exception:
                         pass
@@ -256,7 +222,7 @@ def render_external_drivers_editor(
                         drift=float(new_drift),
                         volatility=float(new_vol),
                         initial_value=float(new_init),
-                        metadata=drv.metadata,
+                        metadata=getattr(drv, 'metadata', {}),
                     )
 
                 elif isinstance(drv, ContinuousMeanRevertDriver):
@@ -283,10 +249,9 @@ def render_external_drivers_editor(
                         speed=float(new_speed),
                         volatility=float(new_vol),
                         initial_value=float(new_init),
-                        metadata=drv.metadata,
+                        metadata=getattr(drv, 'metadata', {}),
                     )
 
->>>>>>> 6c45ece (Integrate External Drivers with Advanced UI + Visualization (3-branch merge))
                 else:
                     st.warning(f"Unsupported driver type: {type(drv)} (advanced)")
 
@@ -298,9 +263,6 @@ def render_external_drivers_editor(
     return drivers
 
 
-<<<<<<< HEAD
-__all__ = ["render_external_drivers_editor", "get_default_discrete_rate_driver"]
-=======
 __all__ = [
     "render_external_drivers_editor",
     "get_default_discrete_rate_driver",
@@ -308,4 +270,3 @@ __all__ = [
     "get_default_gbm_driver",
     "get_default_mean_revert_driver",
 ]
->>>>>>> 6c45ece (Integrate External Drivers with Advanced UI + Visualization (3-branch merge))

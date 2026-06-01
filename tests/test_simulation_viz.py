@@ -10,7 +10,6 @@ These tests follow the same pragmatic style as test_distribution_viz.py:
 """
 
 import datetime as dt
-from typing import Any
 
 import numpy as np
 import pytest
@@ -479,32 +478,17 @@ def test_app_components_init_does_not_require_viz_deps():
 
 
 def test_streamlit_app_still_imports_after_viz_changes():
-<<<<<<< HEAD
     """The main Streamlit app must still be importable without crashing on dead code (NameError guard)."""
     try:
         import app.streamlit_app  # noqa: F401
     except (NameError, AttributeError) as e:
         # AttributeError on fake st.session_state or similar is acceptable during bare import
         if "NameError" in str(type(e)):
-=======
-    """The main Streamlit app must still be importable.
-    We tolerate Streamlit singleton errors (common in test collection) and missing deps.
-    """
-    try:
-        import app.streamlit_app  # noqa: F401
-    except (NameError, AttributeError, RuntimeError) as e:
-        if "DeltaGeneratorSingleton" in str(e) or "singleton" in str(e).lower():
-            pytest.skip("Streamlit singleton already initialized in this test process (expected)")
-        elif "NameError" in str(type(e)) or "AttributeError" in str(type(e)):
->>>>>>> 6c45ece (Integrate External Drivers with Advanced UI + Visualization (3-branch merge))
             raise AssertionError(f"Streamlit app has undefined name: {e}") from e
         else:
             pytest.skip("Streamlit app import hit expected top-level execution issues in test environment")
     except ModuleNotFoundError:
-<<<<<<< HEAD
         # Acceptable when streamlit/pandas/plotly are not installed
-=======
->>>>>>> 6c45ece (Integrate External Drivers with Advanced UI + Visualization (3-branch merge))
         pytest.skip("Streamlit runtime dependencies not present")
 
 
