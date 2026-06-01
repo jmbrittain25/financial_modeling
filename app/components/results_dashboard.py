@@ -233,20 +233,31 @@ def render_results_dashboard(results: list[SimulationResult], scenario_name: str
     except Exception:
         pass
 
-    # --- 6. Downloads ---
+    # --- 6. Downloads (always-visible, richer payload) ---
     st.divider()
-    c1, c2 = st.columns(2)
-    with c1:
-        if st.button("📥 Download Results as CSV"):
-            df = pd.DataFrame({"final_value": finals})
-            st.download_button(
-                "Download final_values.csv",
-                df.to_csv(index=False),
-                file_name=f"{scenario_name.replace(' ', '_')}_results.csv",
-                mime="text/csv",
-            )
-    with c2:
-        st.caption("Full result objects can be exported from the Scenario Builder.")
+    # Build a useful export DF (sim index + final + any custom metrics)
+    export_rows = []
+    for i, r in enumerate(results):
+        row = {"sim_idx": i, "final_value": float(finals[i]) if i < len(finals) else None}
+        cm = r.final_state.get("__custom_metrics__", {}) if isinstance(r.final_state, dict) else {}
+        for k, v in cm.items():
+            if isinstance(v, (int, float)):
+                row[f"custom:{k}"] = float(v)
+        export_rows.append(row)
+    export_df = pd.DataFrame(export_rows)
+
+    csv_bytes = export_df.to_csv(index=False).encode("utf-8")
+    st.download_button(
+        "📥 Download Results (CSV)",
+        data=csv_bytes,
+        file_name=f"{scenario_name.replace(' ', '_')}_results.csv",
+        mime="text/csv",
+        key=f"dl_csv_{scenario_name[:20]}",
+        use_container_width=False,
+    )
+    st.caption(
+        f"Exports {len(export_df)} simulations with final value + {len([c for c in export_df.columns if c.startswith('custom:')])} custom metric(s)."
+    )
 
 
 __all__ = [

@@ -687,6 +687,46 @@ def create_correlation_heatmap(
 # =============================================================================
 
 
+def _extract_selection_rows(event: Any, fallback_key: str | None = None) -> list[int]:
+    """Robust extraction of selected row indices from st.dataframe(..., on_select=...) return.
+
+    Handles dict (common in tests), Streamlit DeltaGenerator/selection objects,
+    None, and falls back to session_state in some Streamlit versions.
+    Returns [] on any unexpected shape (non-fatal).
+    """
+    if event is None:
+        return []
+    # Common test / some versions: dict with nested selection
+    if isinstance(event, dict):
+        try:
+            return event.get("selection", {}).get("rows", []) or []
+        except Exception:
+            return []
+    # Newer Streamlit returns an object with .selection attribute
+    if hasattr(event, "selection"):
+        try:
+            sel = getattr(event, "selection")
+            if isinstance(sel, dict):
+                return sel.get("rows", []) or []
+            # Some versions expose rows directly on the selection object
+            rows = getattr(sel, "rows", None)
+            if rows is not None:
+                return list(rows)
+        except Exception:
+            pass
+    # Fallback via session_state (certain Streamlit on_select behaviors)
+    if fallback_key:
+        try:
+            import streamlit as st  # local import (render already does this, but we are defensive)
+            if f"{fallback_key}_selection" in st.session_state:
+                sel = st.session_state[f"{fallback_key}_selection"]
+                if isinstance(sel, dict):
+                    return sel.get("rows", []) or []
+        except Exception:
+            pass
+    return []
+
+
 def render_simulation_analysis(
     results: list[SimulationResult],
     *,
@@ -771,7 +811,7 @@ def render_simulation_analysis(
             default = (lo, hi)
 
             # Apply quick filter presets if active
-            if quick_filter == "positive" and "cash" in col.lower() or "value" in col.lower():
+            if quick_filter == "positive" and ("cash" in col.lower() or "value" in col.lower()):
                 default = (max(lo, 0.0), hi)
             elif quick_filter == "top10":
                 p90 = float(summary[col].quantile(0.9))
@@ -883,7 +923,7 @@ def render_simulation_analysis(
             selection_mode="multi-row",
             use_container_width=True,
         )
-        sel_rows = event.get("selection", {}).get("rows", []) if event else []
+        sel_rows = _extract_selection_rows(event, fallback_key=f"{key_prefix}_browser")
         if sel_rows:
             newly = [int(active_summary.iloc[r]["sim_idx"]) for r in sel_rows]
             # merge without dups
@@ -1067,7 +1107,9 @@ def render_simulation_analysis(
             )
             color_col = color_by if color_by != "(none)" else None
 
-            sel_mask = np.isin(summary["sim_idx"].values, selected)
+            # Build mask aligned to *active* data (filters may have narrowed active_summary)
+            active_sim_idx = active_summary["sim_idx"].values if not active_summary.empty else np.array([])
+            sel_mask = np.isin(active_sim_idx, selected)
 
             if plot_type == "Scatter":
                 y = st.selectbox(
