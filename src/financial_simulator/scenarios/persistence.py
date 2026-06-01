@@ -181,6 +181,32 @@ def load_user_scenario(name_or_path: str | Path) -> ScenarioConfig:
     raise FileNotFoundError(f"User scenario not found: {name_or_path}")
 
 
+def delete_user_scenario(name: str) -> bool:
+    """Delete the on-disk JSON for a user scenario by its display name.
+
+    Returns True if a matching file was removed, False otherwise.
+    Safe to call even if the scenario only exists in memory or was already deleted.
+    """
+    ensure_user_dirs()
+    target_path: Path | None = None
+    for disp_name, p in list_user_scenarios():
+        if disp_name == name:
+            target_path = p
+            break
+    if target_path is None:
+        # fallback: try exact stem (covers cases where name changed after save)
+        candidate = USER_SCENARIOS_DIR / f"{name}.json"
+        if candidate.exists():
+            target_path = candidate
+    if target_path is not None and target_path.exists():
+        try:
+            target_path.unlink()
+            return True
+        except Exception:
+            return False
+    return False
+
+
 __all__ = [
     "scenario_to_json",
     "scenario_from_json",
@@ -200,6 +226,7 @@ __all__ = [
     "save_user_scenario",
     "list_user_scenarios",
     "load_user_scenario",
+    "delete_user_scenario",
     "USER_DATA_ROOT",
     "USER_SCENARIOS_DIR",
     "USER_DISTRIBUTIONS_FILE",

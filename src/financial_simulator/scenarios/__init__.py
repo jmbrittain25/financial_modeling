@@ -51,6 +51,7 @@ from .persistence import (
     load_user_distribution_library,
     load_user_scenario,
     load_user_scenario_library,
+    delete_user_scenario,
     save_distribution_library,
     save_scenario,
     save_user_distribution_library,
@@ -98,6 +99,7 @@ __all__ = [
     "save_user_scenario",
     "list_user_scenarios",
     "load_user_scenario",
+    "delete_user_scenario",
 ]
 
 __version__ = "1.0.0"  # scenario builder foundation

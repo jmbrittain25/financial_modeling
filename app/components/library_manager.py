@@ -16,6 +16,7 @@ import streamlit as st
 from financial_simulator.scenarios import (
     DistributionLibrary,
     ScenarioLibrary,
+    delete_user_scenario,
     load_user_distribution_library,
     load_user_scenario_library,
     save_user_distribution_library,
@@ -86,12 +87,9 @@ def _render_scenario_library(key_prefix: str):
                 st.rerun()
 
             if c4.button("🗑️", key=f"{key_prefix}_del_{i}"):
-                if lib.remove(scenario.name):
-                    # Persist deletion
-                    # Simple approach: resave the remaining ones
-                    for s in lib.scenarios:
-                        save_user_scenario(s, overwrite=True)
-                    st.warning(f"Deleted '{scenario.name}'")
+                deleted = delete_user_scenario(scenario.name) or lib.remove(scenario.name)
+                if deleted:
+                    st.warning(f"Deleted '{scenario.name}' (removed from disk)")
                     st.rerun()
 
 
@@ -124,10 +122,8 @@ def _render_distribution_library(key_prefix: str):
                 c1.caption(f"Units: {dist.units}")
 
             if c2.button("Load into Editor", key=f"{key_prefix}_load_dist_{i}"):
-                st.session_state[f"{key_prefix}_selected_dist"] = dist.dist
-                st.success(
-                    f"Loaded '{dist.name}' — switch to Distribution Library mode to tweak it."
-                )
+                st.session_state["pending_distribution_to_load"] = dist.dist
+                st.toast(f"Loaded '{dist.name}' — switch to '🎲 Distribution Library' mode to edit it.", icon="📥")
                 st.rerun()
 
             if c3.button("🗑️", key=f"{key_prefix}_del_dist_{i}"):
