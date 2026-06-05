@@ -244,7 +244,9 @@ def render_external_drivers_editor(
                     try:
                         eff_start = scenario_start or datetime(2026, 1, 1)
                         eff_end = scenario_end or datetime(2031, 1, 1)
-                        preview = sample_driver_path(drv, start=eff_start, end=eff_end, n_paths=4, seed=42)
+                        preview = sample_driver_path(
+                            drv, start=eff_start, end=eff_end, n_paths=4, seed=42
+                        )
                         st.caption("Live sample paths (preview)")
                         st.text(
                             f"Terminal mean: {preview['summary']['mean_terminal']:.2f} | std: {preview['summary']['std_terminal']:.2f}"
@@ -305,7 +307,9 @@ def render_external_drivers_editor(
                     try:
                         eff_start = scenario_start or datetime(2026, 1, 1)
                         eff_end = scenario_end or datetime(2031, 1, 1)
-                        preview = sample_driver_path(drv, start=eff_start, end=eff_end, n_paths=4, seed=42)
+                        preview = sample_driver_path(
+                            drv, start=eff_start, end=eff_end, n_paths=4, seed=42
+                        )
                         st.caption("Live sample paths (preview)")
                         st.text(f"Terminal mean: {preview['summary']['mean_terminal']:.4f}")
                     except Exception as e:

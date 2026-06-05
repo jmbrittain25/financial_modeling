@@ -112,9 +112,7 @@ def test_event_builder_quick_presets_mutate_list_in_place(preset_idx):
     key = f"test_preset_preset_{preset_idx}"
     mock_st = _mock_st(active_keys={key})
 
-    result = _run_with_mocks(
-        mock_st, render_event_builder_list_editor, "test_preset", builders
-    )
+    result = _run_with_mocks(mock_st, render_event_builder_list_editor, "test_preset", builders)
 
     assert result is builders
     assert len(builders) == 1

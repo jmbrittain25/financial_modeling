@@ -20,7 +20,6 @@ from financial_simulator.scenarios import (
     load_user_distribution_library,
     load_user_scenario_library,
     save_user_distribution_library,
-    save_user_scenario,
 )
 
 
@@ -123,7 +122,10 @@ def _render_distribution_library(key_prefix: str):
 
             if c2.button("Load into Editor", key=f"{key_prefix}_load_dist_{i}"):
                 st.session_state["pending_distribution_to_load"] = dist.dist
-                st.toast(f"Loaded '{dist.name}' — switch to '🎲 Distribution Library' mode to edit it.", icon="📥")
+                st.toast(
+                    f"Loaded '{dist.name}' — switch to '🎲 Distribution Library' mode to edit it.",
+                    icon="📥",
+                )
                 st.rerun()
 
             if c3.button("🗑️", key=f"{key_prefix}_del_dist_{i}"):

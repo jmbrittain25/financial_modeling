@@ -41,6 +41,7 @@ from .models import (
 )
 from .persistence import (
     TEMPLATES_DIR,
+    delete_user_scenario,
     ensure_user_dirs,
     get_user_data_dir,
     list_templates,
@@ -51,7 +52,6 @@ from .persistence import (
     load_user_distribution_library,
     load_user_scenario,
     load_user_scenario_library,
-    delete_user_scenario,
     save_distribution_library,
     save_scenario,
     save_user_distribution_library,

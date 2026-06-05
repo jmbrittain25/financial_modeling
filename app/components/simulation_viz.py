@@ -705,7 +705,7 @@ def _extract_selection_rows(event: Any, fallback_key: str | None = None) -> list
     # Newer Streamlit returns an object with .selection attribute
     if hasattr(event, "selection"):
         try:
-            sel = getattr(event, "selection")
+            sel = event.selection
             if isinstance(sel, dict):
                 return sel.get("rows", []) or []
             # Some versions expose rows directly on the selection object
@@ -718,6 +718,7 @@ def _extract_selection_rows(event: Any, fallback_key: str | None = None) -> list
     if fallback_key:
         try:
             import streamlit as st  # local import (render already does this, but we are defensive)
+
             if f"{fallback_key}_selection" in st.session_state:
                 sel = st.session_state[f"{fallback_key}_selection"]
                 if isinstance(sel, dict):
@@ -1108,7 +1109,9 @@ def render_simulation_analysis(
             color_col = color_by if color_by != "(none)" else None
 
             # Build mask aligned to *active* data (filters may have narrowed active_summary)
-            active_sim_idx = active_summary["sim_idx"].values if not active_summary.empty else np.array([])
+            active_sim_idx = (
+                active_summary["sim_idx"].values if not active_summary.empty else np.array([])
+            )
             sel_mask = np.isin(active_sim_idx, selected)
 
             if plot_type == "Scatter":

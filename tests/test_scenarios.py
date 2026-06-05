@@ -494,6 +494,7 @@ def test_full_builder_flow_via_public_api_and_persistence(tmp_path, monkeypatch)
     lib2 = load_user_scenario_library()
     assert not any(s.name == base.name for s in lib2.scenarios)
 
+
 def test_custom_metric_time_to_threshold_and_event_count_paths():
     """Exercise two metric types that had low coverage."""
     from financial_simulator.scenarios import CustomMetric
