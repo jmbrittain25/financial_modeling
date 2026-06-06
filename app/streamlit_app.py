@@ -2,8 +2,11 @@
 Financial Simulator — Interactive Scenario Builder
 ==================================================
 
-Major upgrade: Full interactive scenario builder with live distributions,
-templates, external drivers, custom metrics, save/load, and Plotly-first UX.
+Workflow:
+  1. Setup       — dates and starting assets / cash
+  2. Generators  — custom event generators with per-generator distributions
+  3. Run         — configure and execute Monte Carlo simulations
+  4. Results     — visualize outcomes and export configs + results
 
 Run with:
     streamlit run app/streamlit_app.py
@@ -12,10 +15,6 @@ Run with:
 import sys
 from pathlib import Path
 
-# Ensure the project root is on sys.path so that
-# `from app.components.xxx import ...` works when running:
-#   streamlit run app/streamlit_app.py
-# from the repository root.
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from datetime import datetime
@@ -24,15 +23,18 @@ import streamlit as st
 
 from app.components.continuous_processes_editor import render_continuous_processes_editor
 from app.components.custom_metrics_editor import render_custom_metrics_editor
-from app.components.distribution_viz import render_distribution_gallery, render_distribution_picker
 from app.components.event_builder_editor import render_event_builder_list_editor
 from app.components.external_drivers_editor import render_external_drivers_editor
 from app.components.library_manager import render_library_manager
 from app.components.results_dashboard import render_results_dashboard
-from app.components.scenario_overview import render_scenario_overview
-from app.components.template_gallery import render_template_gallery
+from app.components.scenario_io import render_scenario_export_button, render_scenario_import_panel
+from financial_simulator.scenarios import (
+    ScenarioConfig,
+    run_monte_carlo,
+    run_single,
+    save_user_scenario,
+)
 
-# Soft import for the rich interactive results visualization module (requires pandas + plotly)
 try:
     from app.components.simulation_viz import render_simulation_analysis
 
@@ -40,386 +42,367 @@ try:
 except Exception:
     HAS_SIM_VIZ = False
     render_simulation_analysis = None  # type: ignore
-from financial_simulator.monte_carlo import MonteCarloRunner
-from financial_simulator.scenarios import (
-    ScenarioConfig,
-    load_template,
-    load_user_scenario_library,
-    run_monte_carlo,
-    run_single,
-    save_user_scenario,
-)
 
-# Optional legacy examples (still supported)
-try:
-    from examples.business_cashflow import create_business_engine
-    from examples.retirement import create_retirement_engine
 
-    HAS_LEGACY = True
-except Exception:
-    HAS_LEGACY = False
+def _blank_scenario() -> ScenarioConfig:
+    return ScenarioConfig(
+        name="New Scenario",
+        description="",
+        start=datetime(2026, 1, 1),
+        end=datetime(2036, 1, 1),
+        initial_state={"cash": 0.0},
+    )
 
 
 st.set_page_config(
-    page_title="Financial Simulator — Scenario Builder",
+    page_title="Financial Simulator",
     page_icon="📈",
     layout="wide",
     initial_sidebar_state="expanded",
 )
 
-st.title("Financial Simulation Platform")
-st.caption("Powerful Interactive Scenario Builder + Monte Carlo Analysis (Full Phase 5 Experience)")
+st.title("Financial Simulator")
+st.caption("Model your finances with custom generators and Monte Carlo analysis.")
 
 # =============================================================================
 # NAVIGATION
 # =============================================================================
-nav = st.radio(
-    "Mode",
-    ["🛠️ Scenario Builder", "📊 Run & Analyze", "🎲 Distribution Library", "📁 My Scenarios"],
-    horizontal=True,
-    label_visibility="collapsed",
-)
-
+SECTIONS = [
+    "1 · Setup",
+    "2 · Event Generators",
+    "3 · Run",
+    "4 · Results",
+    "Scenarios",
+]
+nav = st.radio("Section", SECTIONS, horizontal=True, label_visibility="collapsed")
 
 # =============================================================================
 # SESSION STATE
 # =============================================================================
 if "current_scenario" not in st.session_state:
-    # Start with a nice default template
-    try:
-        st.session_state.current_scenario = load_template("retirement_30yr")
-    except Exception:
-        st.session_state.current_scenario = ScenarioConfig(
-            name="Quick Start",
-            start=datetime(2026, 1, 1),
-            end=datetime(2027, 1, 1),
-            initial_state={"cumulative_cash": 0.0},
-        )
+    st.session_state.current_scenario = _blank_scenario()
 
 if "results" not in st.session_state:
     st.session_state.results = None
 
-if "lib" not in st.session_state:
-    from financial_simulator.scenarios import DistributionLibrary
+if "run_config" not in st.session_state:
+    st.session_state.run_config = {
+        "n_sims": 300,
+        "base_seed": 42,
+        "n_jobs": 4,
+    }
 
-    st.session_state.lib = DistributionLibrary()
-
-# First-run seeding of user library with high-quality templates (Step 8)
-if "user_libs_seeded" not in st.session_state:
-    try:
-        user_scen_lib = load_user_scenario_library()
-        if len(user_scen_lib.scenarios) == 0:
-            for template_name in [
-                "retirement_30yr",
-                "variable_rate_mortgage",
-                "business_variable_costs",
-                "tax_planning_optimized",
-                "savings_with_growth",
-            ]:
-                try:
-                    tmpl = load_template(template_name)
-                    # Save copies so user can modify without affecting originals
-                    save_user_scenario(tmpl)
-                except Exception:
-                    pass
-            st.toast("Seeded your personal library with the 5 high-quality templates", icon="📚")
-    except Exception:
-        pass
-    st.session_state.user_libs_seeded = True
+if "saved_scenario_name" not in st.session_state:
+    st.session_state.saved_scenario_name = None
 
 current: ScenarioConfig = st.session_state.current_scenario
 
 # =============================================================================
-# SIDEBAR: Current Scenario Summary (plan Step 8 polish)
+# SIDEBAR — scenario management
 # =============================================================================
 with st.sidebar:
-    st.header("Current Scenario")
+    st.header("Scenario")
+
+    st.markdown(f"**{current.name}**")
+    if current.description:
+        st.caption(current.description[:100])
 
     summary = current.summary()
-    st.markdown(f"**{current.name}**")
-    st.caption(current.description or "No description yet")
+    st.caption(f"{summary['horizon_years']}y horizon · {summary['num_event_builders']} generators")
 
-    cols = st.columns(2)
-    cols[0].metric("Horizon", f"{summary['horizon_years']}y")
-    cols[1].metric("Events", summary["num_event_builders"])
+    if st.session_state.saved_scenario_name:
+        st.caption(f"Last saved as: {st.session_state.saved_scenario_name}")
 
-    st.caption(
-        f"Drivers: {summary['num_drivers']} • Processes: {summary['num_continuous']} • Metrics: {summary['num_custom_metrics']}"
-    )
+    st.divider()
 
-    if st.button("💾 Save Now", use_container_width=True, key="sidebar_save"):
-        try:
-            save_user_scenario(current)
-            st.toast(f"Saved '{current.name}' to your library.", icon="💾")
-        except Exception as e:
-            st.error(f"Save failed: {e}")
+    if st.button("New Scenario", use_container_width=True, key="sidebar_new"):
+        st.session_state.current_scenario = _blank_scenario()
+        st.session_state.saved_scenario_name = None
+        st.session_state.results = None
+        st.rerun()
 
-    if st.button("📋 Duplicate", use_container_width=True, key="sidebar_dup"):
+    if st.button("Duplicate", use_container_width=True, key="sidebar_dup"):
         dup = current.clone()
         dup.name = f"{current.name} (Copy)"
         st.session_state.current_scenario = dup
+        st.session_state.saved_scenario_name = None
         st.rerun()
 
+    col_save, col_save_as = st.columns(2)
+    with col_save:
+        if st.button("Save", use_container_width=True, key="sidebar_save"):
+            try:
+                save_user_scenario(current, overwrite=True)
+                st.session_state.saved_scenario_name = current.name
+                st.toast(f"Saved '{current.name}'", icon="💾")
+            except Exception as e:
+                st.error(f"Save failed: {e}")
+    with col_save_as:
+        if st.button("Save As…", use_container_width=True, key="sidebar_save_as"):
+            try:
+                path = save_user_scenario(current, overwrite=False)
+                st.session_state.saved_scenario_name = current.name
+                st.toast(f"Saved as {path.name}", icon="💾")
+            except Exception as e:
+                st.error(f"Save failed: {e}")
+
     st.divider()
-    st.caption("Tip: Use the Template Gallery in Builder mode for great starting points.")
+    st.markdown("**Import / Export**")
+
+    def _on_import_loaded(cfg: ScenarioConfig) -> None:
+        st.session_state.current_scenario = cfg
+        st.session_state.saved_scenario_name = None
+        st.toast(f"Loaded '{cfg.name}' from file", icon="📥")
+
+    render_scenario_import_panel(
+        key_prefix="sidebar_io",
+        on_loaded=_on_import_loaded,
+        label="Import JSON file",
+    )
+    render_scenario_export_button(current, key_prefix="sidebar_export")
+
+    st.divider()
+    st.caption("Load saved scenarios from the **Scenarios** section.")
 
 # =============================================================================
-# MODE: SCENARIO BUILDER (the main new experience)
+# SECTION 1: SETUP
 # =============================================================================
-if nav == "🛠️ Scenario Builder":
-    st.header("🛠️ Scenario Builder")
-    st.markdown(
-        "Build, tweak, preview, save, and run complex financial simulations — no code required."
-    )
-    st.caption(
-        "Tip: Start with a template from the gallery below, then use the presets in the Event Editor to rapidly construct realistic cash flows."
-    )
+if nav == "1 · Setup":
+    st.header("Setup")
+    st.markdown("Define the simulation horizon and your starting assets and cash.")
 
-    badges = []
-    if current.external_drivers:
-        badges.append(f"🔗 {len(current.external_drivers)} external driver(s)")
-    if current.custom_metrics:
-        badges.append(f"📊 {len(current.custom_metrics)} custom metric(s)")
-    if badges:
-        st.caption(" | ".join(badges))
-
-    # Template Gallery (new nice UI)
-    with st.expander("📥 Load from Template Gallery (recommended)", expanded=True):
-        st.caption(
-            "Templates are read-only starters. Load one, freely edit in the builder below, then use **💾 Save to My Library** (or the sidebar Save) to keep your customized version as a personal scenario. Committed templates are never overwritten."
-        )
-        loaded = render_template_gallery(key_prefix="builder_templates")
-        if loaded:
-            st.session_state.current_scenario = loaded
-            st.rerun()
-
-    # Basic metadata
     col1, col2 = st.columns(2)
     with col1:
-        current.name = st.text_input("Scenario Name", value=current.name)
+        current.name = st.text_input("Scenario name", value=current.name)
         current.description = st.text_area(
-            "Description", value=current.description or "", height=80
+            "Description (optional)", value=current.description or "", height=80
         )
     with col2:
-        current.start = st.date_input("Start Date", value=current.start)
-        current.end = st.date_input("End Date", value=current.end)
-        if isinstance(current.start, datetime):
-            current.start = datetime.combine(current.start, datetime.min.time())
-        if isinstance(current.end, datetime):
-            current.end = datetime.combine(current.end, datetime.min.time())
+        start_date = st.date_input("Start date", value=current.start)
+        end_date = st.date_input("End date", value=current.end)
+        current.start = datetime.combine(start_date, datetime.min.time())
+        current.end = datetime.combine(end_date, datetime.min.time())
 
-    # Initial State editor (simple key-value)
-    st.subheader("Initial State")
-    init_state = current.initial_state or {}
-    new_init = {}
-    for k, v in list(init_state.items()):
-        new_init[k] = st.number_input(
-            f"Initial {k}", value=float(v) if isinstance(v, (int, float)) else 0.0, key=f"init_{k}"
-        )
-    # Allow adding new keys
-    new_key = st.text_input("Add new state variable name", key="new_init_key")
-    if new_key:
-        new_init[new_key] = st.number_input(
-            f"Initial value for {new_key}", value=0.0, key="new_init_val"
-        )
-    current.initial_state = new_init
+    st.subheader("Starting assets & cash")
+    st.caption(
+        "Add any state variables you need — cash, investments, home value, "
+        "mortgage rate, etc. Generators can read and update these during the simulation."
+    )
 
-    # === NEW POWERFUL EVENT EDITOR (Step 7 integration) ===
+    init_state = dict(current.initial_state or {})
+    keys_to_remove: list[str] = []
+
+    if init_state:
+        for k in list(init_state.keys()):
+            c1, c2, c3 = st.columns([3, 2, 1])
+            with c1:
+                st.markdown(f"**{k}**")
+            with c2:
+                init_state[k] = c2.number_input(
+                    f"Value for {k}",
+                    value=float(init_state[k]) if isinstance(init_state[k], (int, float)) else 0.0,
+                    key=f"init_{k}",
+                    label_visibility="collapsed",
+                )
+            with c3:
+                if c3.button("Remove", key=f"remove_init_{k}"):
+                    keys_to_remove.append(k)
+
+    for k in keys_to_remove:
+        init_state.pop(k, None)
+
+    st.markdown("**Add variable**")
+    ac1, ac2, ac3 = st.columns([2, 2, 1])
+    with ac1:
+        new_key = st.text_input("Variable name", key="new_init_key", placeholder="e.g. cash")
+    with ac2:
+        new_val = st.number_input("Starting value", value=0.0, key="new_init_val")
+    with ac3:
+        st.write("")
+        if st.button("Add", key="add_init_var") and new_key.strip():
+            init_state[new_key.strip()] = new_val
+            st.rerun()
+
+    current.initial_state = init_state
+
+    if not init_state:
+        st.info("No starting variables yet. Add at least one (e.g. `cash`) above.")
+
+# =============================================================================
+# SECTION 2: EVENT GENERATORS
+# =============================================================================
+elif nav == "2 · Event Generators":
+    st.header("Event Generators")
+    st.markdown(
+        "Build as many generators as you need. Each one defines **when** something "
+        "happens and **how much** it changes — including custom distributions for "
+        "stochastic amounts."
+    )
+
     current.event_builders = render_event_builder_list_editor(
-        key_prefix="main_builder_events",
+        key_prefix="main_generators",
         builders=current.event_builders,
     )
 
-    # === NEW EDITORS (Step 7 integration) ===
-    st.divider()
-    with st.expander(
-        "📊 Custom Metrics (optional but powerful)", expanded=len(current.custom_metrics) > 0
-    ):
-        current.custom_metrics = render_custom_metrics_editor(
-            key_prefix="main_builder_metrics",
-            metrics=current.custom_metrics,
+    with st.expander("Advanced — continuous processes (background growth / volatility)"):
+        st.caption(
+            "Optional. Models slow-moving changes between discrete events — e.g. "
+            "portfolio drift, home appreciation, mean-reverting interest rates."
+        )
+        current.continuous_processes = render_continuous_processes_editor(
+            key_prefix="main_processes",
+            processes=current.continuous_processes,
         )
 
-    with st.expander(
-        "🔗 External Drivers (for variable rates, inflation, etc.)",
-        expanded=len(current.external_drivers) > 0,
-    ):
+    with st.expander("Advanced — external drivers (macro / market variables)"):
+        st.caption(
+            "Optional. Inject stochastic values into state keys on a schedule — "
+            "useful for variable mortgage rates or inflation indices."
+        )
         current.external_drivers = render_external_drivers_editor(
-            key_prefix="main_builder_drivers",
+            key_prefix="main_drivers",
             drivers=current.external_drivers,
             scenario_start=current.start,
             scenario_end=current.end,
         )
 
-    with st.expander(
-        "📈 Continuous Processes (growth & stochastic paths)",
-        expanded=len(current.continuous_processes) > 0,
-    ):
-        current.continuous_processes = render_continuous_processes_editor(
-            key_prefix="main_builder_processes",
-            processes=current.continuous_processes,
+    with st.expander("Advanced — custom metrics (tracked after each run)"):
+        current.custom_metrics = render_custom_metrics_editor(
+            key_prefix="main_metrics",
+            metrics=current.custom_metrics,
         )
 
-    # Scenario Overview (visual summary)
+# =============================================================================
+# SECTION 3: RUN
+# =============================================================================
+elif nav == "3 · Run":
+    st.header("Run Configuration")
+    st.markdown("Configure and execute your Monte Carlo simulation.")
+
+    rc = st.session_state.run_config
+
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        rc["n_sims"] = st.slider(
+            "Number of simulations",
+            min_value=50,
+            max_value=5000,
+            value=rc["n_sims"],
+            step=50,
+            help="More runs give smoother statistics but take longer.",
+        )
+    with col2:
+        rc["base_seed"] = st.number_input(
+            "Random seed",
+            min_value=0,
+            value=rc["base_seed"],
+            help="Same seed + same config = reproducible results.",
+        )
+    with col3:
+        rc["n_jobs"] = st.selectbox(
+            "Parallel workers",
+            options=[1, 2, 4, 8],
+            index=[1, 2, 4, 8].index(rc["n_jobs"]) if rc["n_jobs"] in [1, 2, 4, 8] else 2,
+        )
+
+    st.session_state.run_config = rc
+
     st.divider()
-    render_scenario_overview(current, key_prefix="builder_overview")
 
-    # Distribution picker (still useful)
-    st.subheader("🎲 Quick Distribution Explorer")
-    st.caption(
-        "Use this to explore or create distributions, then embed them via the Event Editor above."
-    )
-    render_distribution_picker(key_prefix="builder_dist", show_save_section=False)
-
-    # Preview & Run controls + Save
-    st.divider()
-    st.markdown("**Run & Persist**")
-    st.caption(
-        "Always save your work. Single-run previews are fast and great for sanity checks before launching Monte Carlo."
-    )
-
+    summary = current.summary()
     c1, c2, c3, c4 = st.columns(4)
-    with c1:
-        if st.button("🔍 Preview Single Run", use_container_width=True):
-            with st.spinner("Running single simulation..."):
-                res = run_single(current, seed=42)
-                st.session_state.preview_result = res
-            st.success("Preview complete. Check the JSON below.")
-    with c2:
-        n_sims = st.slider(
-            "Monte Carlo runs",
-            50,
-            2000,
-            300,
-            50,
-            help="More runs = better statistics but longer wait",
+    c1.metric("Horizon", f"{summary['horizon_years']} years")
+    c2.metric("Generators", summary["num_event_builders"])
+    c3.metric("State variables", len(summary["state_keys"]))
+    c4.metric("Simulations", rc["n_sims"])
+
+    if summary["num_event_builders"] == 0:
+        st.warning(
+            "No event generators defined. Add some in **2 · Event Generators** before running."
         )
-    with c3:
-        if st.button("🚀 Run Monte Carlo from Builder", type="primary", use_container_width=True):
-            with st.spinner(f"Running {n_sims} simulations..."):
-                results = run_monte_carlo(current, n_sims=n_sims, base_seed=42, n_jobs=4)
+
+    col_preview, col_run = st.columns(2)
+    with col_preview:
+        if st.button("Preview single run", use_container_width=True):
+            with st.spinner("Running…"):
+                res = run_single(current, seed=rc["base_seed"])
+                st.session_state.preview_result = res
+            st.success("Preview complete.")
+
+    with col_run:
+        if st.button("Run Monte Carlo", type="primary", use_container_width=True):
+            with st.spinner(f"Running {rc['n_sims']} simulations…"):
+                results = run_monte_carlo(
+                    current,
+                    n_sims=rc["n_sims"],
+                    base_seed=rc["base_seed"],
+                    n_jobs=rc["n_jobs"],
+                )
             st.session_state.results = results
+            st.session_state.results_scenario = current.clone()
             st.session_state.scenario_name = current.name
-            st.success(f"Completed {len(results)} simulations! Switch to 'Run & Analyze' mode.")
-    with c4:
-        if st.button("💾 Save to My Library", use_container_width=True):
-            try:
-                save_user_scenario(current)
-                st.toast(f"Saved '{current.name}' to your personal library.", icon="💾")
-            except Exception as e:
-                st.error(f"Failed to save: {e}")
+            st.session_state.run_summary = {
+                "n_sims": rc["n_sims"],
+                "base_seed": rc["base_seed"],
+                "completed_at": datetime.now().isoformat(),
+            }
+            st.success(f"Completed {len(results)} simulations. Open **4 · Results** to analyze.")
 
     if "preview_result" in st.session_state:
-        with st.expander("Single Run Preview (final state)", expanded=False):
+        with st.expander("Single-run preview (final state)", expanded=False):
             st.json(st.session_state.preview_result.final_state)
 
 # =============================================================================
-# MODE: RUN & ANALYZE (enhanced results view)
+# SECTION 4: RESULTS
 # =============================================================================
-elif nav == "📊 Run & Analyze":
-    st.header("📊 Run & Analyze")
-
-    # Legacy quick selector (still useful)
-    if HAS_LEGACY:
-        with st.sidebar:
-            st.header("Quick Legacy Scenarios")
-            legacy = st.selectbox(
-                "Legacy", ["None", "Retirement Planning", "Small Business Cash Flow"]
-            )
-            if st.button("Run Legacy"):
-                factory = (
-                    create_retirement_engine
-                    if legacy == "Retirement Planning"
-                    else create_business_engine
-                )
-                with st.spinner("Running legacy..."):
-                    results = MonteCarloRunner(n_jobs=4).run(200, factory, base_seed=42)
-                st.session_state.results = results
-                st.session_state.scenario_name = legacy
+elif nav == "4 · Results":
+    st.header("Results")
 
     results = st.session_state.results
     if not results:
-        st.info(
-            "Run a simulation from the **Scenario Builder** tab or the legacy quick selector in the sidebar."
-        )
+        st.info("No results yet. Configure and run a simulation in **3 · Run**.")
         st.stop()
 
-    # Use the Phase 5 rich results dashboard as the primary results view (from advanced builder work)
+    results_scenario = st.session_state.get("results_scenario", current)
+    run_summary = st.session_state.get("run_summary", {})
+
     render_results_dashboard(
         results,
-        scenario_name=st.session_state.get("scenario_name", "Custom Scenario"),
+        scenario_name=st.session_state.get("scenario_name", current.name),
+        scenario_config=results_scenario,
+        run_summary=run_summary,
     )
 
-    # Additionally surface the deep interactive analysis tools (from the visualization work)
-    # This preserves powerful capabilities from both sides: individual sim selection, time scrubber +
-    # value highlighting, custom plots, reactive filtering, etc.
     st.divider()
-    with st.expander(
-        "🔬 Deep Interactive Path Analysis (selection, time scrubber, custom plots)", expanded=False
-    ):
+    with st.expander("Deep path analysis", expanded=False):
         if HAS_SIM_VIZ and render_simulation_analysis is not None:
+            default_key = None
+            if results and results[0].state_history:
+                keys = list(next(iter(results[0].state_history.values())).keys())
+                for candidate in ("cash", "cumulative_cash", "portfolio_value"):
+                    if candidate in keys:
+                        default_key = candidate
+                        break
+                if default_key is None and keys:
+                    default_key = keys[0]
             render_simulation_analysis(
                 results,
-                key_prefix="analyze",
-                default_metric="cumulative_cash"
-                if any("cumulative_cash" in r.final_state for r in results)
-                else None,
+                key_prefix="results_viz",
+                default_metric=default_key,
                 height=480,
             )
         else:
-            st.info(
-                "Install `pandas` and `plotly` to enable the full deep interactive analysis tools "
-                "(individual simulation selection, time-based highlighting, custom plot builder, etc.)."
-            )
+            st.info("Install pandas and plotly for interactive path analysis.")
 
 # =============================================================================
-# MODE: DISTRIBUTION LIBRARY
-# =============================================================================
-elif nav == "🎲 Distribution Library":
-    st.header("🎲 Distribution Library")
-    st.markdown("Create, visualize, and save reusable distributions with live Plotly previews.")
-
-    # Quick preset gallery (from advanced Phase 5 work)
-    with st.expander("Quick Financial Presets", expanded=False):
-        chosen = render_distribution_gallery(key_prefix="global_gallery")
-        if chosen:
-            st.session_state["pending_dist"] = chosen
-
-    def save_to_lib(saved):
-        try:
-            st.session_state.lib.add(saved)
-            st.toast(f"Saved {saved.name}")
-        except Exception as e:
-            st.error(str(e))
-
-    # Support "Load into Editor" from the My Scenarios / My Distributions library tab
-    pending_dist = st.session_state.pop("pending_distribution_to_load", None)
-    render_distribution_picker(
-        key_prefix="global_lib",
-        initial=pending_dist,
-        library=st.session_state.lib,
-        on_save_callback=save_to_lib,
-    )
-
-    st.divider()
-    st.subheader("Currently in Session Library")
-    if st.session_state.lib.distributions:
-        for d in st.session_state.lib.distributions:
-            st.write(f"**{d.name}** — {d.description or 'No description'}")
-    else:
-        st.info(
-            "Save distributions from the picker above — they will appear here and be available when building scenarios."
-        )
-
-# =============================================================================
-# MODE: MY SCENARIOS (now powered by real persistence from Phase 5)
+# SECTION: SCENARIOS (library)
 # =============================================================================
 else:
-    render_library_manager(key_prefix="global_library")
+    st.header("Scenarios")
+    st.markdown(
+        "Save, load, duplicate, and import/export scenario configurations. "
+        "Use **Save As…** in the sidebar to keep variants without overwriting."
+    )
+    render_library_manager(key_prefix="scenarios_lib")
 
-# =============================================================================
-# Footer
-# =============================================================================
-st.caption(
-    "Financial Simulator • Scenario Builder (Phase 5) + Rich Monte Carlo Visualization • Streamlit + Plotly + Pydantic"
-)
+st.caption("Financial Simulator · Streamlit + Plotly + Pydantic")

@@ -17,8 +17,10 @@ import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 
+from app.components.scenario_io import build_results_bundle, export_scenario_json
 from financial_simulator.analytics.risk import RiskAnalyzer
 from financial_simulator.core.simulation import SimulationResult
+from financial_simulator.scenarios import ScenarioConfig
 
 
 def _extract_state_series(
@@ -154,7 +156,12 @@ def plot_outcome_histogram(
     return fig
 
 
-def render_results_dashboard(results: list[SimulationResult], scenario_name: str = "Scenario"):
+def render_results_dashboard(
+    results: list[SimulationResult],
+    scenario_name: str = "Scenario",
+    scenario_config: ScenarioConfig | None = None,
+    run_summary: dict | None = None,
+):
     """Main entry point for the rich results view."""
     if not results:
         st.warning("No results to display.")
@@ -233,9 +240,10 @@ def render_results_dashboard(results: list[SimulationResult], scenario_name: str
     except Exception:
         pass
 
-    # --- 6. Downloads (always-visible, richer payload) ---
+    # --- 6. Exports ---
     st.divider()
-    # Build a useful export DF (sim index + final + any custom metrics)
+    st.subheader("Export")
+
     export_rows = []
     for i, r in enumerate(results):
         row = {"sim_idx": i, "final_value": float(finals[i]) if i < len(finals) else None}
@@ -243,20 +251,59 @@ def render_results_dashboard(results: list[SimulationResult], scenario_name: str
         for k, v in cm.items():
             if isinstance(v, (int, float)):
                 row[f"custom:{k}"] = float(v)
+        for state_k, state_v in (r.final_state or {}).items():
+            if state_k != "__custom_metrics__" and isinstance(state_v, (int, float)):
+                row[f"final:{state_k}"] = float(state_v)
         export_rows.append(row)
     export_df = pd.DataFrame(export_rows)
 
+    safe_name = scenario_name.replace(" ", "_")
     csv_bytes = export_df.to_csv(index=False).encode("utf-8")
-    st.download_button(
-        "📥 Download Results (CSV)",
-        data=csv_bytes,
-        file_name=f"{scenario_name.replace(' ', '_')}_results.csv",
-        mime="text/csv",
-        key=f"dl_csv_{scenario_name[:20]}",
-        use_container_width=False,
-    )
+
+    dl1, dl2, dl3 = st.columns(3)
+    with dl1:
+        st.download_button(
+            "Download results (CSV)",
+            data=csv_bytes,
+            file_name=f"{safe_name}_results.csv",
+            mime="text/csv",
+            key=f"dl_csv_{safe_name[:20]}",
+            use_container_width=True,
+        )
+    with dl2:
+        if scenario_config is not None:
+            st.download_button(
+                "Download scenario config (JSON)",
+                data=export_scenario_json(scenario_config),
+                file_name=f"{safe_name}_config.json",
+                mime="application/json",
+                key=f"dl_cfg_{safe_name[:20]}",
+                use_container_width=True,
+            )
+    with dl3:
+        if scenario_config is not None:
+            summary_payload = {
+                **(run_summary or {}),
+                "scenario_name": scenario_name,
+                "n_results": len(results),
+                "mean_final": float(np.mean(finals)),
+                "median_final": float(np.median(finals)),
+                "p5_final": float(np.percentile(finals, 5)),
+                "p95_final": float(np.percentile(finals, 95)),
+            }
+            st.download_button(
+                "Download full bundle (JSON)",
+                data=build_results_bundle(scenario_config, summary_payload),
+                file_name=f"{safe_name}_bundle.json",
+                mime="application/json",
+                key=f"dl_bundle_{safe_name[:20]}",
+                use_container_width=True,
+            )
+
+    custom_cols = [c for c in export_df.columns if c.startswith("custom:")]
     st.caption(
-        f"Exports {len(export_df)} simulations with final value + {len([c for c in export_df.columns if c.startswith('custom:')])} custom metric(s)."
+        f"CSV: {len(export_df)} simulations, {len(custom_cols)} custom metric(s). "
+        "JSON bundle includes the scenario config used for this run plus summary statistics."
     )
 
 

@@ -17,8 +17,6 @@ from contextlib import ExitStack
 from datetime import datetime, timedelta
 from unittest.mock import MagicMock, patch
 
-import pytest
-
 from app.components.continuous_processes_editor import render_continuous_processes_editor
 from app.components.custom_metrics_editor import render_custom_metrics_editor
 from app.components.event_builder_editor import render_event_builder_list_editor
@@ -113,23 +111,21 @@ def _patch_nested_event_editors():
     )
 
 
-@pytest.mark.parametrize("preset_idx", [0, 3, 7])
-def test_event_builder_quick_presets_mutate_list_in_place(preset_idx):
+def test_event_builder_add_generator_mutates_list_in_place():
     builders: list = []
-    key = f"test_preset_preset_{preset_idx}"
-    mock_st = _mock_st(active_keys={key})
+    mock_st = _mock_st(active_keys={"test_add_add_new"})
 
-    result = _run_with_mocks(mock_st, render_event_builder_list_editor, "test_preset", builders)
+    result = _run_with_mocks(mock_st, render_event_builder_list_editor, "test_add", builders)
 
     assert result is builders
     assert len(builders) == 1
     assert isinstance(builders[0], ComposedEventBuilder)
 
     cfg = ScenarioConfig(
-        name="Preset Mutation Test",
+        name="Add Generator Test",
         start=datetime(2026, 1, 1),
         end=datetime(2026, 6, 1),
-        initial_state={"cumulative_cash": 0.0},
+        initial_state={"cash": 0.0},
         event_builders=builders,
     )
     build_engine(cfg, seed=123)

@@ -12,9 +12,7 @@ broken ComposedEventBuilder / ScenarioConfig objects.
 
 from datetime import datetime
 
-import pytest
-
-from app.components.event_builder_editor import PRESET_DEFS
+from app.components.event_builder_editor import _default_generator
 
 # Pure helpers under test
 from app.components.timing_editor import (
@@ -66,50 +64,28 @@ def test_get_default_vg_returns_correct_types():
 
 
 # =============================================================================
-# Preset contract tests — the most important safety net for the visual builder
+# Default generator contract — safety net for the visual builder
 # =============================================================================
 
 
-@pytest.mark.parametrize("preset", PRESET_DEFS, ids=lambda p: p["label"])
-def test_every_preset_produces_a_valid_runnable_event_builder(preset):
-    """
-    Every one-click preset must:
-    1. Return a well-formed ComposedEventBuilder
-    2. Be materializable by build_engine
-    3. Run to completion via run_single without crashing
-    """
-    builder = preset["builder"]()
+def test_default_generator_produces_valid_runnable_event_builder():
+    """The blank-slate generator must materialize and run without crashing."""
+    builder = _default_generator()
     assert isinstance(builder, ComposedEventBuilder)
     assert builder.timing is not None
     assert builder.value_gen is not None
 
-    # Build a minimal runnable scenario around it
-    start = datetime(2026, 1, 1)
-    end = datetime(2026, 6, 1)
-
     cfg = ScenarioConfig(
-        name=f"Preset Test: {preset['label']}",
-        start=start,
-        end=end,
-        initial_state={"cumulative_cash": 0.0, "portfolio_value": 100_000.0},
+        name="Default Generator Test",
+        start=datetime(2026, 1, 1),
+        end=datetime(2026, 6, 1),
+        initial_state={"cash": 0.0},
         event_builders=[builder],
     )
 
-    # This is the critical contract: the UI must only ever produce runnable artifacts
     _ = build_engine(cfg, seed=123)
     result = run_single(cfg, seed=123)
-
     assert result is not None
-    assert "cumulative_cash" in result.final_state or len(result.events) >= 0
-
-
-def test_all_presets_have_unique_reasonable_names():
-    """Names should be distinct and human-friendly (prevents accidental overwrites in UI)."""
-    names = [p["label"] for p in PRESET_DEFS]
-    assert len(names) == len(set(names)), "Preset labels must be unique"
-    for name in names:
-        assert len(name) > 5
-        assert any(c.isalpha() for c in name)
 
 
 # =============================================================================
@@ -154,10 +130,10 @@ def test_editor_factories_can_be_composed_into_full_scenario():
     assert isinstance(metrics["final_cash"], (int, float))
 
 
-def test_preset_builders_do_not_mutate_shared_state():
-    """Each call to a preset lambda must produce an independent object."""
-    b1 = PRESET_DEFS[0]["builder"]()
-    b2 = PRESET_DEFS[0]["builder"]()
+def test_default_generator_calls_produce_independent_objects():
+    """Each call must produce an independent object."""
+    b1 = _default_generator()
+    b2 = _default_generator()
     assert b1 is not b2
     b1.metadata["mutated"] = True
     assert "mutated" not in b2.metadata
