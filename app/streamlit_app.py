@@ -54,6 +54,14 @@ def _blank_scenario() -> ScenarioConfig:
     )
 
 
+def _load_imported_scenario(cfg: ScenarioConfig) -> None:
+    st.session_state.current_scenario = cfg
+    st.session_state.saved_scenario_name = None
+    st.session_state.results = None
+    st.toast(f"Imported '{cfg.name}'", icon="📥")
+    st.rerun()
+
+
 st.set_page_config(
     page_title="Financial Simulator",
     page_icon="📈",
@@ -149,14 +157,9 @@ with st.sidebar:
     st.divider()
     st.markdown("**Import / Export**")
 
-    def _on_import_loaded(cfg: ScenarioConfig) -> None:
-        st.session_state.current_scenario = cfg
-        st.session_state.saved_scenario_name = None
-        st.toast(f"Loaded '{cfg.name}' from file", icon="📥")
-
     render_scenario_import_panel(
         key_prefix="sidebar_io",
-        on_loaded=_on_import_loaded,
+        on_loaded=_load_imported_scenario,
         label="Import JSON file",
     )
     render_scenario_export_button(current, key_prefix="sidebar_export")
@@ -170,6 +173,18 @@ with st.sidebar:
 if nav == "1 · Setup":
     st.header("Setup")
     st.markdown("Define the simulation horizon and your starting assets and cash.")
+
+    imp_col, exp_col = st.columns([3, 1])
+    with imp_col:
+        render_scenario_import_panel(
+            key_prefix="setup_import",
+            on_loaded=_load_imported_scenario,
+            label="Import scenario",
+            button_label="Import scenario from file…",
+        )
+    with exp_col:
+        st.write("")
+        render_scenario_export_button(current, key_prefix="setup_export", label="Export")
 
     col1, col2 = st.columns(2)
     with col1:
@@ -214,16 +229,29 @@ if nav == "1 · Setup":
     st.markdown("**Add variable**")
     ac1, ac2, ac3 = st.columns([2, 2, 1])
     with ac1:
-        new_key = st.text_input("Variable name", key="new_init_key", placeholder="e.g. cash")
+        new_key = st.text_input("Variable name", key="new_init_key", placeholder="e.g. stocks")
     with ac2:
         new_val = st.number_input("Starting value", value=0.0, key="new_init_val")
     with ac3:
         st.write("")
-        if st.button("Add", key="add_init_var") and new_key.strip():
-            init_state[new_key.strip()] = new_val
+        add_clicked = ac3.button("Add", key="add_init_var", use_container_width=True)
+
+    if add_clicked:
+        key_name = new_key.strip()
+        if not key_name:
+            st.warning("Enter a variable name before adding.")
+        elif key_name in init_state:
+            st.warning(f"'{key_name}' already exists — edit its value above or pick another name.")
+        else:
+            init_state[key_name] = new_val
+            st.session_state["new_init_key"] = ""
+            st.toast(f"Added '{key_name}'", icon="✅")
+            current.initial_state = dict(init_state)
+            st.session_state.current_scenario = current
             st.rerun()
 
-    current.initial_state = init_state
+    current.initial_state = dict(init_state)
+    st.session_state.current_scenario = current
 
     if not init_state:
         st.info("No starting variables yet. Add at least one (e.g. `cash`) above.")

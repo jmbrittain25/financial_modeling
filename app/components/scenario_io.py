@@ -25,35 +25,51 @@ def import_scenario_json(text: str) -> ScenarioConfig:
     return scenario_from_json(text)
 
 
+def _scenario_from_upload(uploaded) -> ScenarioConfig:
+    """Parse an uploaded JSON file, including full result bundles."""
+    text = uploaded.getvalue().decode("utf-8")
+    data = json.loads(text)
+    if isinstance(data, dict) and "scenario" in data:
+        return ScenarioConfig.from_dict(data["scenario"])
+    return import_scenario_json(text)
+
+
 def render_scenario_import_panel(
     key_prefix: str = "scenario_io",
     *,
     on_loaded: Callable[[ScenarioConfig], None] | None = None,
     label: str = "Import scenario configuration",
+    button_label: str | None = None,
 ) -> ScenarioConfig | None:
     """
-    File uploader + optional paste area. Returns loaded ScenarioConfig or None.
-    Calls on_loaded(cfg) when a file is successfully parsed.
+    File picker for scenario JSON. Imports once per selected file and calls
+    on_loaded(cfg) on success.
     """
     uploaded = st.file_uploader(
-        label,
+        button_label or label,
         type=["json"],
         key=f"{key_prefix}_upload",
-        help="Upload a .json scenario file exported from this app.",
+        help="Choose a .json scenario file exported from this app.",
+        label_visibility="visible" if button_label is None else "collapsed",
     )
 
-    if uploaded is not None:
-        try:
-            text = uploaded.getvalue().decode("utf-8")
-            cfg = import_scenario_json(text)
-            if on_loaded:
-                on_loaded(cfg)
-            return cfg
-        except Exception as e:
-            st.error(f"Could not parse scenario file: {e}")
-            return None
+    if uploaded is None:
+        return None
 
-    return None
+    file_id = f"{uploaded.file_id}:{uploaded.name}:{uploaded.size}"
+    seen_key = f"{key_prefix}_imported_file_id"
+    if st.session_state.get(seen_key) == file_id:
+        return None
+
+    try:
+        cfg = _scenario_from_upload(uploaded)
+        st.session_state[seen_key] = file_id
+        if on_loaded:
+            on_loaded(cfg)
+        return cfg
+    except Exception as e:
+        st.error(f"Could not parse scenario file: {e}")
+        return None
 
 
 def render_scenario_export_button(
