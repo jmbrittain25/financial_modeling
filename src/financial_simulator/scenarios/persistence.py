@@ -8,12 +8,16 @@ Phase 3+: file I/O for user_data/ and template loading.
 from __future__ import annotations
 
 import json
+import shutil
 from pathlib import Path
 
 from .models import DistributionLibrary, ScenarioConfig, ScenarioLibrary
 
+# Repo root (financial_modeling/)
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
+
 # Default location for committed templates (relative to this file or repo root)
-TEMPLATES_DIR = Path(__file__).parent.parent.parent.parent / "app" / "data" / "templates"
+TEMPLATES_DIR = PROJECT_ROOT / "app" / "data" / "templates"
 
 
 def scenario_to_json(cfg: ScenarioConfig, indent: int = 2) -> str:
@@ -68,16 +72,35 @@ def load_template(name: str) -> ScenarioConfig:
 
 # -----------------------------------------------------------------------------
 # User data persistence (Phase 4+ full save/load for the interactive builder)
-# Location: ~/.financial-simulator/v1/ — survives app restarts, portable.
+# Location: <project>/user_data/ — local to the repo, gitignored, easy to browse.
 # -----------------------------------------------------------------------------
 
-USER_DATA_ROOT = Path.home() / ".financial-simulator" / "v1"
+USER_DATA_ROOT = PROJECT_ROOT / "user_data"
 USER_SCENARIOS_DIR = USER_DATA_ROOT / "scenarios"
 USER_DISTRIBUTIONS_FILE = USER_DATA_ROOT / "distribution_library.json"
 
+_LEGACY_USER_DATA_ROOT = Path.home() / ".financial-simulator" / "v1"
+_LEGACY_SCENARIOS_DIR = _LEGACY_USER_DATA_ROOT / "scenarios"
+_LEGACY_DISTRIBUTIONS_FILE = _LEGACY_USER_DATA_ROOT / "distribution_library.json"
+
+
+def _migrate_legacy_user_data_if_needed() -> None:
+    """Copy scenarios/distributions from ~/.financial-simulator if the new dir is empty."""
+    if USER_DATA_ROOT != PROJECT_ROOT / "user_data":
+        return
+    ensure_user_dirs()
+    new_scenarios = list(USER_SCENARIOS_DIR.glob("*.json"))
+    if not new_scenarios and _LEGACY_SCENARIOS_DIR.exists():
+        for legacy_path in _LEGACY_SCENARIOS_DIR.glob("*.json"):
+            target = USER_SCENARIOS_DIR / legacy_path.name
+            if not target.exists():
+                shutil.copy2(legacy_path, target)
+    if not USER_DISTRIBUTIONS_FILE.exists() and _LEGACY_DISTRIBUTIONS_FILE.exists():
+        shutil.copy2(_LEGACY_DISTRIBUTIONS_FILE, USER_DISTRIBUTIONS_FILE)
+
 
 def get_user_data_dir() -> Path:
-    """Return (and ensure) the root user data directory."""
+    """Return (and ensure) the root user data directory under the project root."""
     USER_DATA_ROOT.mkdir(parents=True, exist_ok=True)
     return USER_DATA_ROOT
 
@@ -121,7 +144,7 @@ def save_user_distribution_library(lib: DistributionLibrary) -> None:
 
 def load_user_scenario_library() -> ScenarioLibrary:
     """Load all user-saved scenarios into a ScenarioLibrary (scans directory)."""
-    ensure_user_dirs()
+    _migrate_legacy_user_data_if_needed()
     lib = ScenarioLibrary()
     for p in sorted(USER_SCENARIOS_DIR.glob("*.json")):
         try:
@@ -226,6 +249,7 @@ __all__ = [
     "save_distribution_library",
     "list_templates",
     "load_template",
+    "PROJECT_ROOT",
     "TEMPLATES_DIR",
     # User persistence (new)
     "get_user_data_dir",

@@ -8,6 +8,7 @@ import streamlit as st
 
 from app.components.scenario_io import render_scenario_export_button, render_scenario_import_panel
 from financial_simulator.scenarios import (
+    USER_SCENARIOS_DIR,
     ScenarioLibrary,
     delete_user_scenario,
     load_user_scenario_library,
@@ -18,6 +19,7 @@ def render_library_manager(key_prefix: str = "lib"):
     """Browser for user-saved scenarios with import/export."""
 
     st.markdown("#### Saved scenarios")
+    st.caption(f"Library folder: `{USER_SCENARIOS_DIR}`")
 
     def _on_file_import(cfg):
         st.session_state["current_scenario"] = cfg

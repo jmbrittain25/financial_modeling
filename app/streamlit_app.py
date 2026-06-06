@@ -30,6 +30,7 @@ from app.components.results_dashboard import render_results_dashboard
 from app.components.scenario_io import render_scenario_export_button, render_scenario_import_panel
 from financial_simulator.scenarios import (
     ScenarioConfig,
+    get_user_data_dir,
     run_monte_carlo,
     run_single,
     save_user_scenario,
@@ -157,7 +158,7 @@ with st.sidebar:
         "Save As — file name",
         value=current.name,
         key="sidebar_save_as_name",
-        help="Saved to ~/.financial-simulator/v1/scenarios/ (library folder on this machine).",
+        help=f"Saved to {get_user_data_dir() / 'scenarios'} (project folder, gitignored).",
     )
     if st.button("Save As…", use_container_width=True, key="sidebar_save_as"):
         chosen = (save_as_name or current.name).strip()

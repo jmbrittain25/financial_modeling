@@ -287,8 +287,19 @@ def test_scenario_library_crud_and_summary():
     assert s["num_event_builders"] == 1
 
 
+def test_user_data_defaults_to_project_user_data_dir():
+    from financial_simulator.scenarios.persistence import (
+        PROJECT_ROOT,
+        USER_DATA_ROOT,
+        USER_SCENARIOS_DIR,
+    )
+
+    assert USER_DATA_ROOT == PROJECT_ROOT / "user_data"
+    assert USER_SCENARIOS_DIR == USER_DATA_ROOT / "scenarios"
+
+
 def test_user_persistence_helpers_smoke(tmp_path, monkeypatch):
-    """Smoke the new user persistence functions (use tmp to avoid polluting real ~/.financial-simulator)."""
+    """Smoke the new user persistence functions (use tmp to avoid polluting real user_data/)."""
 
     # Monkeypatch the module constants so we write inside tmp_path instead of $HOME
     import financial_simulator.scenarios.persistence as pers

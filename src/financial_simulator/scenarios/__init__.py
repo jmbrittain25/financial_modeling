@@ -40,7 +40,9 @@ from .models import (
     ScenarioLibrary,
 )
 from .persistence import (
+    PROJECT_ROOT,
     TEMPLATES_DIR,
+    USER_SCENARIOS_DIR,
     delete_user_scenario,
     ensure_user_dirs,
     get_user_data_dir,
@@ -89,7 +91,9 @@ __all__ = [
     "save_distribution_library",
     "list_templates",
     "load_template",
+    "PROJECT_ROOT",
     "TEMPLATES_DIR",
+    "USER_SCENARIOS_DIR",
     # User persistence
     "get_user_data_dir",
     "ensure_user_dirs",

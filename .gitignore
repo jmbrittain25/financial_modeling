@@ -19,9 +19,8 @@ __pycache__/
 # Editable installs
 src/financial_simulator.egg-info/
 
-# User-generated scenario builder artifacts (Phase 2+)
-app/data/user_scenarios/
-app/data/custom_distributions.json
+# User-generated scenario builder artifacts (local library — not committed)
+/user_data/
 app/data/*.tmp
 *.local.json
 
