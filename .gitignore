@@ -27,3 +27,4 @@ app/data/*.tmp
 
 # Hypothesis testing cache
 .hypothesis/
+temp_convo
