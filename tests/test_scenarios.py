@@ -127,7 +127,8 @@ def test_custom_metric_max_drawdown():
                 timing=IntervalTiming(
                     interval=timedelta(days=30), start_time=start + timedelta(days=40)
                 ),
-                value_gen=FixedValue(value=-2500.0),  # repeated outflows
+                value_gen=FixedValue(value=2500.0),
+                metadata={"cash_flow_direction": "subtractive"},
             ),
         ],
         custom_metrics=[

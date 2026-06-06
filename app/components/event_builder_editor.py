@@ -11,12 +11,21 @@ from datetime import timedelta
 
 from app.components.timing_editor import render_timing_editor
 from app.components.value_generator_editor import render_value_generator_editor
-from financial_simulator.core.distributions import NormalDistribution
+from financial_simulator.core.distributions import TriangularDistribution
 from financial_simulator.core.event import (
+    CASH_FLOW_ADDITIVE,
+    CASH_FLOW_DIRECTION_KEY,
+    CASH_FLOW_SUBTRACTIVE,
     ComposedEventBuilder,
     DistributionValue,
     IntervalTiming,
 )
+
+
+def _flow_label(metadata: dict) -> str:
+    if metadata.get(CASH_FLOW_DIRECTION_KEY) == CASH_FLOW_SUBTRACTIVE:
+        return "Subtracts from cash"
+    return "Adds to cash"
 
 
 def _default_generator() -> ComposedEventBuilder:
@@ -24,8 +33,8 @@ def _default_generator() -> ComposedEventBuilder:
     return ComposedEventBuilder(
         name="generator",
         timing=IntervalTiming(interval=timedelta(days=30)),
-        value_gen=DistributionValue(dist=NormalDistribution(mean=0.0, std=1.0)),
-        metadata={"type": "custom"},
+        value_gen=DistributionValue(dist=TriangularDistribution(low=50.0, mode=80.0, high=150.0)),
+        metadata={"type": "custom", CASH_FLOW_DIRECTION_KEY: CASH_FLOW_ADDITIVE},
     )
 
 
@@ -45,9 +54,8 @@ def render_event_builder_list_editor(
         builders = []
 
     st.caption(
-        "Add generators for anything that changes over time — income, expenses, "
-        "investment flows, loan payments, etc. Each generator has its own timing "
-        "and value logic; use **Distribution** value type for custom stochastic amounts."
+        "Enter positive amounts only. Use **Add to cash** / **Subtract from cash** on each "
+        "generator to control whether events increase or decrease your cash balance."
     )
 
     if st.button("➕ Add Generator", type="primary", key=f"{key_prefix}_add_new"):
@@ -63,18 +71,31 @@ def render_event_builder_list_editor(
         to_delete: list[int] = []
         for idx, eb in enumerate(builders):
             with st.container(border=True):
-                c1, c2, c3, c4 = st.columns([3, 1, 1, 1])
+                c1, c2, c3, c4, c5 = st.columns([2, 2, 1, 1, 1])
                 c1.markdown(
                     f"**{eb.name or f'Generator {idx + 1}'}** — `{eb.metadata.get('type', 'custom')}`"
                 )
-                if c2.button("✏️ Edit", key=f"{key_prefix}_edit_{idx}", use_container_width=True):
+                c1.caption(_flow_label(eb.metadata))
+
+                is_subtractive = eb.metadata.get(CASH_FLOW_DIRECTION_KEY) == CASH_FLOW_SUBTRACTIVE
+                if c2.toggle(
+                    "Subtract from cash",
+                    value=is_subtractive,
+                    key=f"{key_prefix}_flow_{idx}",
+                    help="Off = add to cash. On = subtract from cash.",
+                ):
+                    eb.metadata[CASH_FLOW_DIRECTION_KEY] = CASH_FLOW_SUBTRACTIVE
+                else:
+                    eb.metadata[CASH_FLOW_DIRECTION_KEY] = CASH_FLOW_ADDITIVE
+
+                if c3.button("✏️ Edit", key=f"{key_prefix}_edit_{idx}", use_container_width=True):
                     st.session_state[f"{key_prefix}_editing_idx"] = idx
                     st.rerun()
-                if c3.button("📋 Dup", key=f"{key_prefix}_dup_{idx}", use_container_width=True):
+                if c4.button("📋 Dup", key=f"{key_prefix}_dup_{idx}", use_container_width=True):
                     builders.append(eb.model_copy(deep=True))
                     st.toast("Duplicated", icon="📋")
                     st.rerun()
-                if c4.button("🗑️", key=f"{key_prefix}_del_{idx}", use_container_width=True):
+                if c5.button("🗑️", key=f"{key_prefix}_del_{idx}", use_container_width=True):
                     to_delete.append(idx)
 
         if to_delete:
@@ -102,6 +123,18 @@ def render_event_builder_list_editor(
             key=f"{key_prefix}_edit_meta",
         )
 
+        current_direction = current.metadata.get(CASH_FLOW_DIRECTION_KEY, CASH_FLOW_ADDITIVE)
+        flow_choice = st.radio(
+            "Cash impact",
+            options=[CASH_FLOW_ADDITIVE, CASH_FLOW_SUBTRACTIVE],
+            format_func=lambda x: (
+                "Add to cash" if x == CASH_FLOW_ADDITIVE else "Subtract from cash"
+            ),
+            index=0 if current_direction != CASH_FLOW_SUBTRACTIVE else 1,
+            horizontal=True,
+            key=f"{key_prefix}_edit_flow_{editing_idx}",
+        )
+
         new_timing = render_timing_editor(
             key_prefix=f"{key_prefix}_edit_timing_{editing_idx}",
             initial=current.timing,
@@ -120,7 +153,11 @@ def render_event_builder_list_editor(
                 name=name or None,
                 timing=new_timing,
                 value_gen=new_vg,
-                metadata={**current.metadata, "type": meta_type},
+                metadata={
+                    **current.metadata,
+                    "type": meta_type,
+                    CASH_FLOW_DIRECTION_KEY: flow_choice,
+                },
             )
             st.session_state.pop(f"{key_prefix}_editing_idx", None)
             st.success("Generator updated.")

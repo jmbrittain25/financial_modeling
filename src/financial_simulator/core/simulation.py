@@ -33,7 +33,7 @@ except ImportError:
 import numpy as np
 from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, TypeAdapter
 
-from .event import ComposedEventBuilder, Event, EventBuilder
+from .event import ComposedEventBuilder, Event, EventBuilder, signed_cash_flow_amount
 from .stochastic import GeometricBrownianMotion, MeanRevertingProcess
 
 # Max consecutive iterations where the global clock fails to advance (guards infinite loops).
@@ -43,11 +43,6 @@ _MAX_STUCK_ITERATIONS = 8
 class SimulationStuckError(RuntimeError):
     """Raised when the simulation clock stops advancing (misconfigured timing)."""
 
-
-# Metadata types that represent outflows — positive generator values are treated as debits.
-_OUTFLOW_EVENT_TYPES = frozenset(
-    {"expenses", "expense", "opex", "loan_payment", "mortgage", "tax", "tax_drag", "cost"}
-)
 
 # Preferred state keys for applying discrete event cash flows (first match wins).
 _LIQUIDITY_STATE_KEYS = ("cash", "cumulative_cash")
@@ -59,15 +54,6 @@ def _liquidity_state_key(state: dict[str, Any]) -> str | None:
         if key in state:
             return key
     return None
-
-
-def _signed_event_cash_flow(event: Event) -> float:
-    """Convert a raw event value into a signed cash-flow amount."""
-    value = float(event.value)
-    event_type = str(event.metadata.get("type", "")).lower()
-    if event_type in _OUTFLOW_EVENT_TYPES and value > 0:
-        return -value
-    return value
 
 
 # =============================================================================
@@ -365,7 +351,7 @@ class SimulationEngine(BaseModel):
             # 7. Apply signed cash flows to the primary liquidity account
             liquidity_key = _liquidity_state_key(self.state)
             if liquidity_key and events_at_time:
-                net_flow = sum(_signed_event_cash_flow(e) for e in events_at_time)
+                net_flow = sum(signed_cash_flow_amount(e) for e in events_at_time)
                 self.state[liquidity_key] = float(self.state[liquidity_key]) + net_flow
 
             # 8. Record history and advance

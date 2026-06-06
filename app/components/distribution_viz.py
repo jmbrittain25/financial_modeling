@@ -262,6 +262,7 @@ def render_distribution_picker(
     on_save_callback: Callable[[SavedDistribution], None] | None = None,
     show_save_section: bool = True,
     height: int = 420,
+    require_positive_magnitudes: bool = False,
 ):
     """
     Main interactive component.
@@ -272,7 +273,15 @@ def render_distribution_picker(
     import streamlit as st
 
     st.markdown("### 🎲 Distribution Configuration")
-    st.caption("Adjust parameters — the preview updates live. Great for exploring uncertainty.")
+    if require_positive_magnitudes:
+        st.caption(
+            "Amount parameters must be zero or positive. Whether draws add or subtract "
+            "from cash is set on the generator."
+        )
+    else:
+        st.caption("Adjust parameters — the preview updates live. Great for exploring uncertainty.")
+
+    min_amount = 0.0 if require_positive_magnitudes else None
 
     # Determine current type
     current_type = getattr(initial, "type", "normal") if initial else "normal"
@@ -300,7 +309,11 @@ def render_distribution_picker(
 
     if dist_type == "normal":
         params["mean"] = cols[0].number_input(
-            "Mean (μ)", value=float(params["mean"]), step=0.1, key=f"{key_prefix}_mean"
+            "Mean (μ)",
+            value=max(0.0, float(params["mean"])),
+            min_value=min_amount,
+            step=0.1,
+            key=f"{key_prefix}_mean",
         )
         params["std"] = cols[1].number_input(
             "Std Dev (σ) > 0",
@@ -312,22 +325,39 @@ def render_distribution_picker(
 
     elif dist_type == "uniform":
         params["low"] = cols[0].number_input(
-            "Low (minimum)", value=float(params["low"]), step=0.1, key=f"{key_prefix}_low"
+            "Low (minimum)",
+            value=max(0.0, float(params["low"])),
+            min_value=min_amount,
+            step=0.1,
+            key=f"{key_prefix}_low",
         )
         params["high"] = cols[1].number_input(
-            "High (maximum) ≥ low", value=float(params["high"]), step=0.1, key=f"{key_prefix}_high"
+            "High (maximum) ≥ low",
+            value=max(float(params["low"]), float(params["high"])),
+            min_value=min_amount,
+            step=0.1,
+            key=f"{key_prefix}_high",
         )
 
     elif dist_type == "triangular":
         params["low"] = cols[0].number_input(
-            "Low (pessimistic)", value=float(params["low"]), step=0.1, key=f"{key_prefix}_low"
+            "Low (pessimistic)",
+            value=max(0.0, float(params["low"])),
+            min_value=min_amount,
+            step=0.1,
+            key=f"{key_prefix}_low",
         )
         params["mode"] = cols[1].number_input(
-            "Mode (most likely)", value=float(params["mode"]), step=0.1, key=f"{key_prefix}_mode"
+            "Mode (most likely)",
+            value=max(float(params["low"]), float(params["mode"])),
+            min_value=min_amount,
+            step=0.1,
+            key=f"{key_prefix}_mode",
         )
         params["high"] = cols[2].number_input(
             "High (optimistic) ≥ mode",
-            value=float(params["high"]),
+            value=max(float(params["mode"]), float(params["high"])),
+            min_value=min_amount,
             step=0.1,
             key=f"{key_prefix}_high",
         )
@@ -371,7 +401,11 @@ def render_distribution_picker(
 
     elif dist_type == "constant":
         params["value"] = cols[0].number_input(
-            "Constant Value", value=float(params["value"]), step=1.0, key=f"{key_prefix}_value"
+            "Constant Value",
+            value=max(0.0, float(params["value"])),
+            min_value=min_amount,
+            step=1.0,
+            key=f"{key_prefix}_value",
         )
 
     # Build the actual distribution object

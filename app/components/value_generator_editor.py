@@ -70,7 +70,10 @@ def render_value_generator_editor(
     import streamlit as st
 
     st.markdown("#### 💵 Value / Cash Flow")
-    st.caption("What is the dollar (or rate) impact each time the timing fires?")
+    st.caption(
+        "Enter positive amounts only. Use **Add to cash** / **Subtract from cash** on the "
+        "generator to control direction."
+    )
 
     current_type = getattr(initial, "type", "Fixed") if initial else "Fixed"
 
@@ -97,8 +100,9 @@ def render_value_generator_editor(
             else 1000.0
         )
         v = st.number_input(
-            "Fixed value each period (positive = inflow)",
-            value=val,
+            "Fixed amount each period",
+            value=max(0.0, val),
+            min_value=0.0,
             step=50.0,
             key=f"{key_prefix}_fixed_val",
         )
@@ -116,7 +120,13 @@ def render_value_generator_editor(
             else 0.03
         )
         c1, c2 = st.columns(2)
-        iv = c1.number_input("Starting value", value=init, step=50.0, key=f"{key_prefix}_grow_init")
+        iv = c1.number_input(
+            "Starting amount",
+            value=max(0.0, init),
+            min_value=0.0,
+            step=50.0,
+            key=f"{key_prefix}_grow_init",
+        )
         gr = c2.number_input(
             "Annual growth rate (e.g. 0.03 = 3%)",
             value=g,
@@ -139,6 +149,7 @@ def render_value_generator_editor(
             key_prefix=f"{key_prefix}_dist",
             initial=dist,
             show_save_section=False,
+            require_positive_magnitudes=True,
         )
         return DistributionValue(dist=chosen)
 
@@ -164,7 +175,13 @@ def render_value_generator_editor(
             else "mortgage_rate"
         )
         c1, c2, c3 = st.columns(3)
-        prin = c1.number_input("Principal ($)", value=p, step=5000.0, key=f"{key_prefix}_loan_prin")
+        prin = c1.number_input(
+            "Principal ($)",
+            value=max(0.0, p),
+            min_value=0.0,
+            step=5000.0,
+            key=f"{key_prefix}_loan_prin",
+        )
         rate = c2.number_input(
             "Initial rate (e.g. 0.065)",
             value=r,
@@ -225,8 +242,9 @@ def render_value_generator_editor(
         )
         c1, c2 = st.columns(2)
         a = c1.number_input(
-            "Contribution per period (positive number, will be emitted as negative cash)",
-            value=amt,
+            "Contribution amount per period",
+            value=max(0.0, amt),
+            min_value=0.0,
             step=50.0,
             key=f"{key_prefix}_inv_amt",
         )

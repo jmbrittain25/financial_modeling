@@ -36,6 +36,11 @@ from .distributions import AnyDistribution, create_distribution
 # =============================================================================
 
 
+CASH_FLOW_DIRECTION_KEY = "cash_flow_direction"
+CASH_FLOW_ADDITIVE = "additive"
+CASH_FLOW_SUBTRACTIVE = "subtractive"
+
+
 class Event(BaseModel):
     """A single financial event (cash flow) at a specific time.
 
@@ -61,6 +66,19 @@ class Event(BaseModel):
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Event:
         return cls.model_validate(data)
+
+
+def signed_cash_flow_amount(event: Event) -> float:
+    """Apply the generator's explicit direction to the event magnitude.
+
+    Generator value inputs are treated as non-negative magnitudes; direction is
+    controlled by ``metadata[cash_flow_direction]`` (additive or subtractive).
+    """
+    magnitude = abs(float(event.value))
+    direction = str(event.metadata.get(CASH_FLOW_DIRECTION_KEY, CASH_FLOW_ADDITIVE)).lower()
+    if direction == CASH_FLOW_SUBTRACTIVE:
+        return -magnitude
+    return magnitude
 
 
 # =============================================================================
@@ -620,6 +638,10 @@ def create_event_builder(data: dict[str, Any]) -> EventBuilder:
 
 
 __all__ = [
+    "CASH_FLOW_DIRECTION_KEY",
+    "CASH_FLOW_ADDITIVE",
+    "CASH_FLOW_SUBTRACTIVE",
+    "signed_cash_flow_amount",
     "Event",
     "Timing",
     "OneTimeTiming",

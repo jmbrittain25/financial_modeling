@@ -32,8 +32,10 @@ def test_basic_engine_run(simple_engine: SimulationEngine):
     assert result.final_state["cumulative_cash"] > 0
 
 
-def test_engine_applies_event_flows_to_cash_key_and_respects_expense_sign():
-    """Cash (not just cumulative_cash) must receive signed flows from generators."""
+def test_engine_applies_event_flows_to_cash_key_with_explicit_direction():
+    """Cash flows use explicit additive/subtractive generator metadata."""
+    from financial_simulator.core.event import CASH_FLOW_DIRECTION_KEY, CASH_FLOW_SUBTRACTIVE
+
     eng = SimulationEngine(
         name="cash-flow",
         start=dt.datetime(2026, 1, 1),
@@ -52,13 +54,35 @@ def test_engine_applies_event_flows_to_cash_key_and_respects_expense_sign():
         ComposedEventBuilder(
             timing=IntervalTiming(interval=dt.timedelta(days=30)),
             value_gen=FixedValue(value=200.0),
-            metadata={"type": "expenses"},
+            metadata={"type": "expenses", CASH_FLOW_DIRECTION_KEY: CASH_FLOW_SUBTRACTIVE},
         )
     )
     eng.run()
     result = eng.get_result()
     assert result.final_state["cash"] != 10_000.0
     assert result.final_state["cash"] > 10_000.0
+
+
+def test_signed_cash_flow_amount_honors_explicit_direction():
+    from financial_simulator.core.event import (
+        CASH_FLOW_DIRECTION_KEY,
+        CASH_FLOW_SUBTRACTIVE,
+        Event,
+        signed_cash_flow_amount,
+    )
+
+    additive = Event(time=dt.datetime(2026, 1, 1), value=250.0, metadata={})
+    subtractive = Event(
+        time=dt.datetime(2026, 1, 1),
+        value=250.0,
+        metadata={CASH_FLOW_DIRECTION_KEY: CASH_FLOW_SUBTRACTIVE},
+    )
+    assert signed_cash_flow_amount(additive) == 250.0
+    assert signed_cash_flow_amount(subtractive) == -250.0
+    assert (
+        signed_cash_flow_amount(Event(time=dt.datetime(2026, 1, 1), value=-99.0, metadata={}))
+        == 99.0
+    )
 
 
 def test_engine_reproducibility():
@@ -224,12 +248,15 @@ def test_cumulative_cash_auto_tracking_with_mixed_events():
             value_gen=FixedValue(value=1000),
         )
     )
+    from financial_simulator.core.event import CASH_FLOW_DIRECTION_KEY, CASH_FLOW_SUBTRACTIVE
+
     eng.add_event_builder(
         ComposedEventBuilder(
             timing=IntervalTiming(
                 interval=dt.timedelta(days=30), start_time=dt.datetime(2026, 1, 15)
             ),
-            value_gen=FixedValue(value=-300),
+            value_gen=FixedValue(value=300),
+            metadata={CASH_FLOW_DIRECTION_KEY: CASH_FLOW_SUBTRACTIVE},
         )
     )
     eng.run()
