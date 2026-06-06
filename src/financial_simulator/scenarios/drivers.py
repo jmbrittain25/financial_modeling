@@ -71,6 +71,22 @@ def create_external_driver(data: dict[str, Any] | AnyExternalDriver) -> AnyExter
 # Path Sampling (the "sample over time" capability)
 # -----------------------------------------------------------------------------
 
+# Cap grid size so driver previews / sampling cannot allocate unbounded time series.
+MAX_DRIVER_GRID_POINTS = 500
+
+
+def _downsample_times(times: list[dt.datetime], max_points: int) -> list[dt.datetime]:
+    """Evenly subsample a time grid, always keeping first and last."""
+    if len(times) <= max_points:
+        return times
+    if max_points < 2:
+        return [times[0]]
+    step = (len(times) - 1) / (max_points - 1)
+    indices = {0, len(times) - 1}
+    for i in range(1, max_points - 1):
+        indices.add(int(round(i * step)))
+    return [times[i] for i in sorted(indices)]
+
 
 def sample_driver_path(
     driver: AnyExternalDriver,
@@ -81,6 +97,7 @@ def sample_driver_path(
     n_paths: int = 3,
     seed: int | None = None,
     num_points: int | None = None,
+    max_grid_points: int = MAX_DRIVER_GRID_POINTS,
 ) -> dict[str, Any]:
     """Generate one or more sample paths for a driver over [start, end].
 
@@ -99,8 +116,9 @@ def sample_driver_path(
     """
     rng = np.random.default_rng(seed)
 
-    # Resolve time grid
-    times = _resolve_time_grid(start, end, freq, num_points)
+    # Resolve time grid (capped to avoid unbounded allocation on long horizons)
+    cap = max(2, int(max_grid_points))
+    times = _resolve_time_grid(start, end, freq, num_points, max_points=cap)
 
     if isinstance(driver, DiscreteRateDriver):
         paths = [_sample_discrete_path(driver, times, rng) for _ in range(n_paths)]
@@ -148,13 +166,22 @@ def sample_driver_path(
 
 
 def _resolve_time_grid(
-    start: dt.datetime, end: dt.datetime, freq: str | dt.timedelta, num_points: int | None
+    start: dt.datetime,
+    end: dt.datetime,
+    freq: str | dt.timedelta,
+    num_points: int | None,
+    *,
+    max_points: int = MAX_DRIVER_GRID_POINTS,
 ) -> list[dt.datetime]:
     """Produce a list of observation times between start and end (inclusive)."""
+    cap = max(2, int(max_points))
+
     if num_points is not None and num_points > 0:
-        # Evenly spaced in time (simple linear)
-        delta = (end - start) / (num_points - 1) if num_points > 1 else dt.timedelta(0)
-        return [start + i * delta for i in range(num_points)]
+        n = min(int(num_points), cap)
+        if n == 1:
+            return [start]
+        delta = (end - start) / (n - 1)
+        return [start + i * delta for i in range(n)]
 
     # Try pandas for rich freq support (graceful fallback if pandas missing)
     try:
@@ -170,24 +197,30 @@ def _resolve_time_grid(
             times = [start] + times
         if times[-1] != end:
             times = times + [end]
-        return times
+        return _downsample_times(times, cap)
     except Exception:
         pass
 
-    # Fallback: monthly steps
+    # Fallback: fixed steps
     if isinstance(freq, dt.timedelta):
         step = freq
     else:
         step = dt.timedelta(days=30)  # reasonable default
 
+    if step <= dt.timedelta(0):
+        raise ValueError("time grid step must be strictly positive")
+
     times: list[dt.datetime] = []
     t = start
     while t <= end:
         times.append(t)
+        if len(times) > cap * 2:
+            # Bail out early on misconfigured grids before hitting a true infinite loop
+            break
         t = t + step
-    if times[-1] != end:
+    if times and times[-1] != end:
         times.append(end)
-    return times
+    return _downsample_times(times, cap)
 
 
 def _sample_discrete_path(

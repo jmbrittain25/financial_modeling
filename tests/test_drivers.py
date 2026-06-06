@@ -34,6 +34,7 @@ from financial_simulator.scenarios import (
     run_single,
     sample_driver_path,
 )
+from financial_simulator.scenarios.drivers import _resolve_time_grid
 
 # =============================================================================
 # Factory & Construction
@@ -118,6 +119,29 @@ def test_continuous_drivers_start_at_initial_value():
         assert p["paths"][0][0] == 42.0
 
 
+def test_resolve_time_grid_caps_long_horizons():
+    start = datetime(1900, 1, 1)
+    end = datetime(2100, 1, 1)
+    times = _resolve_time_grid(start, end, "D", None, max_points=100)
+    assert len(times) <= 100
+    assert times[0] == start
+    assert times[-1] == end
+
+
+def test_resolve_time_grid_rejects_zero_step():
+    with pytest.raises(ValueError, match="strictly positive"):
+        _resolve_time_grid(datetime(2026, 1, 1), datetime(2027, 1, 1), timedelta(0), None)
+
+
+def test_sample_driver_path_respects_max_grid_points():
+    start = datetime(1900, 1, 1)
+    end = datetime(2100, 1, 1)
+    d = make_inflation_driver()
+    p = sample_driver_path(d, start, end, freq="D", n_paths=1, seed=1, max_grid_points=50)
+    assert len(p["times"]) <= 50
+    assert len(p["paths"][0]) == len(p["times"])
+
+
 def test_discrete_rate_driver_produces_step_function():
     """When using a coarse timing, values should be piecewise constant."""
     start = datetime(2026, 1, 1)
@@ -140,6 +164,7 @@ def test_discrete_rate_driver_produces_step_function():
 # =============================================================================
 
 
+@pytest.mark.slow
 @settings(max_examples=80, deadline=500)
 @given(
     drift=floats(-0.5, 0.5),
@@ -159,6 +184,7 @@ def test_gbm_paths_are_positive_when_starting_positive(drift, vol, months, seed)
         assert all(v > 0 for v in path), f"Negative value in GBM path with drift={drift}, vol={vol}"
 
 
+@pytest.mark.slow
 @settings(max_examples=60)
 @given(
     speed=floats(0.1, 5.0),

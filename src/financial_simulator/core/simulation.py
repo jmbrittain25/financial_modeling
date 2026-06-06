@@ -36,6 +36,14 @@ from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, TypeAdapter
 from .event import ComposedEventBuilder, Event, EventBuilder
 from .stochastic import GeometricBrownianMotion, MeanRevertingProcess
 
+# Max consecutive iterations where the global clock fails to advance (guards infinite loops).
+_MAX_STUCK_ITERATIONS = 8
+
+
+class SimulationStuckError(RuntimeError):
+    """Raised when the simulation clock stops advancing (misconfigured timing)."""
+
+
 # =============================================================================
 # Continuous Processes (state evolution between discrete events)
 # =============================================================================
@@ -276,6 +284,7 @@ class SimulationEngine(BaseModel):
 
         current = self.start
         self.state_history[current] = dict(self.state)  # snapshot
+        stuck_iterations = 0
 
         while True:
             # 1. Ask every builder for its next event time
@@ -290,6 +299,17 @@ class SimulationEngine(BaseModel):
 
             # 2. Advance global clock to the soonest next event
             next_time = min(nt for nt, _ in candidates)
+
+            if next_time <= current:
+                stuck_iterations += 1
+                if stuck_iterations >= _MAX_STUCK_ITERATIONS:
+                    raise SimulationStuckError(
+                        f"Simulation clock stuck at {current!s}: next event time {next_time!s} "
+                        "did not advance after repeated iterations. Check for zero/negative "
+                        "intervals or builders that never advance."
+                    )
+            else:
+                stuck_iterations = 0
 
             # 3. Let continuous processes evolve over the interval
             delta = next_time - current

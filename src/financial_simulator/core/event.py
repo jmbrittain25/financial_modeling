@@ -27,7 +27,7 @@ except ImportError:
     from typing import Annotated
 
 import numpy as np
-from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, TypeAdapter
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr, TypeAdapter, field_validator
 
 from .distributions import AnyDistribution, create_distribution
 
@@ -120,6 +120,15 @@ class IntervalTiming(Timing):
     start_time: dt.datetime | None = None
 
     _current_next: dt.datetime | None = PrivateAttr(default=None)
+
+    @field_validator("interval")
+    @classmethod
+    def interval_must_be_positive(cls, v: dt.timedelta) -> dt.timedelta:
+        if v <= dt.timedelta(0):
+            raise ValueError(
+                "interval must be strictly positive (zero/negative causes infinite loops)"
+            )
+        return v
 
     def reset(self, rng: np.random.Generator | None = None) -> None:
         self._current_next = self.start_time

@@ -166,3 +166,7 @@ def pytest_configure(config):
         "markers",
         "integration: marks tests as full end-to-end simulations (select with '-m integration')",
     )
+    config.addinivalue_line(
+        "markers",
+        "slow: marks property-based or expensive tests (deselect with '-m \"not slow\"')",
+    )

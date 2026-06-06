@@ -27,9 +27,13 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e .
 
-      - name: Run tests (fast suite, excluding integration)
+      - name: Run tests (fast suite, excluding integration and slow property tests)
         run: |
-          python -m pytest tests/ -q -m "not integration" --cov=financial_simulator --cov-report=xml --cov-report=term
+          python -m pytest tests/ -q -m "not integration and not slow" --cov=financial_simulator --cov-report=xml --cov-report=term
+
+      - name: Run slow property-based tests
+        run: |
+          python -m pytest tests/ -q -m "slow" --tb=short
 
       - name: Run integration tests (optional)
         run: |

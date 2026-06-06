@@ -5,6 +5,8 @@ MonteCarloRunner tests live in test_monte_carlo.py.
 
 import datetime as dt
 
+import pytest
+
 from financial_simulator.core import (
     AppreciationProcess,
     ComposedEventBuilder,
@@ -18,6 +20,7 @@ from financial_simulator.core.event import (
     OneTimeTiming,
     RateChangeValue,
 )
+from financial_simulator.core.simulation import SimulationStuckError
 
 # --- Basic functionality ---
 
@@ -58,6 +61,26 @@ def test_engine_reproducibility():
 
 
 # --- Edge cases ---
+
+
+def test_engine_raises_simulation_stuck_error_on_non_advancing_clock():
+    """Engine guard: misconfigured zero-interval timing must not spin forever."""
+    bad_timing = IntervalTiming.model_construct(interval=dt.timedelta(0))
+    eng = SimulationEngine(
+        name="stuck",
+        start=dt.datetime(2026, 1, 1),
+        end=dt.datetime(2026, 12, 31),
+        initial_state={"cumulative_cash": 0.0},
+        seed=1,
+    )
+    eng.add_event_builder(
+        ComposedEventBuilder(
+            timing=bad_timing,
+            value_gen=FixedValue(value=100.0),
+        )
+    )
+    with pytest.raises(SimulationStuckError, match="stuck"):
+        eng.run()
 
 
 def test_engine_with_no_builders_produces_single_state_snapshot(

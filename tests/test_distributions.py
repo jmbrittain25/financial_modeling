@@ -177,6 +177,7 @@ def test_all_distributions_are_reproducible(dist_cls, kwargs):
 # --- Hypothesis property-based tests ---
 
 
+@pytest.mark.slow
 @settings(max_examples=200)
 @given(
     mean=floats(-1e6, 1e6),
@@ -192,6 +193,7 @@ def test_normal_samples_within_reasonable_bounds(mean, std, n):
     assert all(lo <= s <= hi for s in samples)
 
 
+@pytest.mark.slow
 @settings(max_examples=100)
 @given(low=floats(-1e5, 1e5), width=floats(1e-9, 1e5))
 def test_uniform_respects_bounds(low, width):
@@ -203,6 +205,7 @@ def test_uniform_respects_bounds(low, width):
     assert all(low <= s <= high for s in samples)
 
 
+@pytest.mark.slow
 @settings(max_examples=50)
 @given(alpha=floats(0.01, 50), beta=floats(0.01, 50))
 def test_beta_always_in_unit_interval(alpha, beta):

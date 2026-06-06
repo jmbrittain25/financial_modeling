@@ -8,6 +8,7 @@ import datetime as dt
 
 import numpy as np
 import pytest
+from pydantic import ValidationError
 
 from financial_simulator.core.event import (
     IntervalTiming,
@@ -105,6 +106,11 @@ def test_interval_with_start_in_past_catches_up():
     # Should have fast-forwarded to the first date >= start
     assert nt >= start
     assert nt.month in (3, 4, 5)
+
+
+def test_interval_zero_duration_rejected_at_validation():
+    with pytest.raises(ValidationError, match="strictly positive"):
+        IntervalTiming(interval=dt.timedelta(0))
 
 
 def test_interval_exhausted_returns_none():

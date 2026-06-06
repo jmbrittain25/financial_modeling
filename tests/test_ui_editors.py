@@ -64,7 +64,14 @@ def _mock_st(*, active_keys: set[str]) -> MagicMock:
     mock_st.columns.side_effect = columns_side_effect
 
     mock_st.text_input.return_value = "test_item"
-    mock_st.number_input.return_value = 0.05
+
+    def number_input_side_effect(*_args, **kwargs):
+        key = kwargs.get("key", "")
+        if "interval" in key:
+            return 90
+        return 0.05
+
+    mock_st.number_input.side_effect = number_input_side_effect
     mock_st.checkbox.return_value = False
     mock_st.selectbox.side_effect = selectbox_side_effect
     mock_st.date_input.return_value = datetime(2026, 6, 15)
