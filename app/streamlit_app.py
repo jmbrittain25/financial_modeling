@@ -103,6 +103,9 @@ if "run_config" not in st.session_state:
 if "saved_scenario_name" not in st.session_state:
     st.session_state.saved_scenario_name = None
 
+if "init_var_form_reset" not in st.session_state:
+    st.session_state.init_var_form_reset = 0
+
 current: ScenarioConfig = st.session_state.current_scenario
 
 # =============================================================================
@@ -227,11 +230,20 @@ if nav == "1 · Setup":
         init_state.pop(k, None)
 
     st.markdown("**Add variable**")
+    form_reset = st.session_state.init_var_form_reset
     ac1, ac2, ac3 = st.columns([2, 2, 1])
     with ac1:
-        new_key = st.text_input("Variable name", key="new_init_key", placeholder="e.g. stocks")
+        new_key = st.text_input(
+            "Variable name",
+            key=f"new_init_key_{form_reset}",
+            placeholder="e.g. stocks",
+        )
     with ac2:
-        new_val = st.number_input("Starting value", value=0.0, key="new_init_val")
+        new_val = st.number_input(
+            "Starting value",
+            value=0.0,
+            key=f"new_init_val_{form_reset}",
+        )
     with ac3:
         st.write("")
         add_clicked = ac3.button("Add", key="add_init_var", use_container_width=True)
@@ -244,7 +256,7 @@ if nav == "1 · Setup":
             st.warning(f"'{key_name}' already exists — edit its value above or pick another name.")
         else:
             init_state[key_name] = new_val
-            st.session_state["new_init_key"] = ""
+            st.session_state.init_var_form_reset += 1
             st.toast(f"Added '{key_name}'", icon="✅")
             current.initial_state = dict(init_state)
             st.session_state.current_scenario = current
