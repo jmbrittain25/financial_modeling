@@ -172,7 +172,7 @@ def render_results_dashboard(
 
     # --- 1. Final value statistics ---
     # Try to find the most interesting final value key
-    candidate_keys = ["cumulative_cash", "portfolio_value", "cash", "home_value", "savings"]
+    candidate_keys = ["cash", "cumulative_cash", "portfolio_value", "home_value", "savings"]
     final_key = "cumulative_cash"
     for k in candidate_keys:
         if k in results[0].final_state:

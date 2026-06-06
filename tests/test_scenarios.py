@@ -309,6 +309,9 @@ def test_user_persistence_helpers_smoke(tmp_path, monkeypatch):
     saved_path = save_user_scenario(cfg)
     assert saved_path.exists()
 
+    custom_path = save_user_scenario(cfg, overwrite=False, file_name="Retirement v2")
+    assert custom_path.name == "Retirement-v2.json"
+
     pairs = list_user_scenarios()
     assert len(pairs) >= 1
     assert any("My Custom" in n or "My-Custom" in n for n, _ in pairs)

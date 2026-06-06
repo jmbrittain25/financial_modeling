@@ -231,13 +231,25 @@ def compute_quantile_bands(
     quantiles: tuple[float, ...] = (0.05, 0.10, 0.25, 0.50, 0.75, 0.90, 0.95),
 ) -> dict[float, pd.Series]:
     """Column-wise quantiles across simulations at each time step (skipna)."""
-    if aligned_df.empty:
+    if aligned_df.empty or aligned_df.shape[1] == 0:
         return {}
     bands: dict[float, pd.Series] = {}
     for q in quantiles:
-        # pandas 2/3 compatible: numeric_only=True + let quantile handle NaNs (default behavior in recent pandas)
-        bands[q] = aligned_df.quantile(q, axis=1, numeric_only=True)
+        series = aligned_df.quantile(q, axis=1, numeric_only=True)
+        if isinstance(series, pd.DataFrame):
+            series = series.iloc[0]
+        bands[float(q)] = series
     return bands
+
+
+def _band_series(bands: dict[float, pd.Series], q: float) -> pd.Series | None:
+    """Fetch a quantile band, tolerating tiny float key mismatches."""
+    if q in bands:
+        return bands[q]
+    for key, series in bands.items():
+        if abs(float(key) - q) < 1e-9:
+            return series
+    return None
 
 
 # =============================================================================
@@ -471,35 +483,44 @@ def create_fan_chart(
         return go.Figure().update_layout(title="No path data for fan chart", height=height)
 
     bands = compute_quantile_bands(aligned_df, (0.05, 0.25, 0.50, 0.75, 0.95))
-    times = bands[0.50].index
+    p50 = _band_series(bands, 0.50)
+    p95 = _band_series(bands, 0.95)
+    p05 = _band_series(bands, 0.05)
+    p75 = _band_series(bands, 0.75)
+    p25 = _band_series(bands, 0.25)
+    if p50 is None or p50.empty:
+        return go.Figure().update_layout(title="No quantile data for fan chart", height=height)
 
+    times = p50.index
     fig = go.Figure()
-    fig.add_trace(
-        go.Scatter(
-            x=list(times) + list(reversed(times)),
-            y=list(bands[0.95]) + list(reversed(bands[0.05])),
-            fill="toself",
-            fillcolor="rgba(147, 197, 253, 0.22)",
-            line=dict(color="rgba(0,0,0,0)"),
-            name="5-95%",
-            hoverinfo="skip",
+    if p95 is not None and p05 is not None and not p95.empty and not p05.empty:
+        fig.add_trace(
+            go.Scatter(
+                x=list(times) + list(reversed(times)),
+                y=p95.to_list() + p05.to_list()[::-1],
+                fill="toself",
+                fillcolor="rgba(147, 197, 253, 0.22)",
+                line=dict(color="rgba(0,0,0,0)"),
+                name="5-95%",
+                hoverinfo="skip",
+            )
         )
-    )
-    fig.add_trace(
-        go.Scatter(
-            x=list(times) + list(reversed(times)),
-            y=list(bands[0.75]) + list(reversed(bands[0.25])),
-            fill="toself",
-            fillcolor="rgba(59, 130, 246, 0.35)",
-            line=dict(color="rgba(0,0,0,0)"),
-            name="25-75%",
-            hoverinfo="skip",
+    if p75 is not None and p25 is not None and not p75.empty and not p25.empty:
+        fig.add_trace(
+            go.Scatter(
+                x=list(times) + list(reversed(times)),
+                y=p75.to_list() + p25.to_list()[::-1],
+                fill="toself",
+                fillcolor="rgba(59, 130, 246, 0.35)",
+                line=dict(color="rgba(0,0,0,0)"),
+                name="25-75%",
+                hoverinfo="skip",
+            )
         )
-    )
     fig.add_trace(
         go.Scatter(
             x=times,
-            y=bands[0.50],
+            y=p50,
             mode="lines",
             line=dict(color="#1e3a8a", width=2.8),
             name="Median",
@@ -1002,13 +1023,16 @@ def render_simulation_analysis(
         if fan_style.startswith("Interquartile"):
             # Rebuild a simpler fan for focus
             bands = compute_quantile_bands(aligned_for_fan, (0.25, 0.50, 0.75))
-            if not aligned_for_fan.empty and 0.50 in bands:
-                times = bands[0.50].index
+            p50 = _band_series(bands, 0.50)
+            p75 = _band_series(bands, 0.75)
+            p25 = _band_series(bands, 0.25)
+            if p50 is not None and not p50.empty and p75 is not None and p25 is not None:
+                times = p50.index
                 fan = go.Figure()
                 fan.add_trace(
                     go.Scatter(
                         x=list(times) + list(reversed(times)),
-                        y=list(bands[0.75]) + list(reversed(bands[0.25])),
+                        y=p75.to_list() + p25.to_list()[::-1],
                         fill="toself",
                         fillcolor="rgba(59, 130, 246, 0.35)",
                         line=dict(color="rgba(0,0,0,0)"),
@@ -1019,7 +1043,7 @@ def render_simulation_analysis(
                 fan.add_trace(
                     go.Scatter(
                         x=times,
-                        y=bands[0.50],
+                        y=p50,
                         mode="lines",
                         line=dict(color="#1e3a8a", width=2.8),
                         name="Median",

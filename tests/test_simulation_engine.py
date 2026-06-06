@@ -32,6 +32,35 @@ def test_basic_engine_run(simple_engine: SimulationEngine):
     assert result.final_state["cumulative_cash"] > 0
 
 
+def test_engine_applies_event_flows_to_cash_key_and_respects_expense_sign():
+    """Cash (not just cumulative_cash) must receive signed flows from generators."""
+    eng = SimulationEngine(
+        name="cash-flow",
+        start=dt.datetime(2026, 1, 1),
+        end=dt.datetime(2026, 4, 1),
+        initial_state={"cash": 10_000.0},
+        seed=7,
+    )
+    eng.add_event_builder(
+        ComposedEventBuilder(
+            timing=IntervalTiming(interval=dt.timedelta(days=30)),
+            value_gen=FixedValue(value=500.0),
+            metadata={"type": "income"},
+        )
+    )
+    eng.add_event_builder(
+        ComposedEventBuilder(
+            timing=IntervalTiming(interval=dt.timedelta(days=30)),
+            value_gen=FixedValue(value=200.0),
+            metadata={"type": "expenses"},
+        )
+    )
+    eng.run()
+    result = eng.get_result()
+    assert result.final_state["cash"] != 10_000.0
+    assert result.final_state["cash"] > 10_000.0
+
+
 def test_engine_reproducibility():
     def make_engine(seed: int) -> SimulationEngine:
         eng = SimulationEngine(

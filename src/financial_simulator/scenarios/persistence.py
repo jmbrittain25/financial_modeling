@@ -132,18 +132,28 @@ def load_user_scenario_library() -> ScenarioLibrary:
     return lib
 
 
-def save_user_scenario(cfg: ScenarioConfig, overwrite: bool = True) -> Path:
-    """Save a scenario as its own JSON file under the user scenarios dir.
-    Filename is slugified from the scenario name.
-    """
-    ensure_user_dirs()
-    safe_name = (
-        "".join(c if c.isalnum() or c in ("-", "_") else "-" for c in cfg.name).strip("-")[:80]
+def _slugify_scenario_filename(name: str) -> str:
+    return (
+        "".join(c if c.isalnum() or c in ("-", "_") else "-" for c in name).strip("-")[:80]
         or "untitled"
     )
+
+
+def save_user_scenario(
+    cfg: ScenarioConfig,
+    overwrite: bool = True,
+    *,
+    file_name: str | None = None,
+) -> Path:
+    """Save a scenario as its own JSON file under the user scenarios dir.
+
+    ``file_name`` (optional) sets the on-disk filename stem; defaults to ``cfg.name``.
+    When ``overwrite`` is False and the target path exists, a numeric suffix is appended.
+    """
+    ensure_user_dirs()
+    safe_name = _slugify_scenario_filename(file_name or cfg.name)
     path = USER_SCENARIOS_DIR / f"{safe_name}.json"
     if path.exists() and not overwrite:
-        # append numeric suffix
         i = 1
         while (USER_SCENARIOS_DIR / f"{safe_name}-{i}.json").exists():
             i += 1

@@ -139,36 +139,46 @@ with st.sidebar:
         st.session_state.saved_scenario_name = None
         st.rerun()
 
-    col_save, col_save_as = st.columns(2)
-    with col_save:
-        if st.button("Save", use_container_width=True, key="sidebar_save"):
-            try:
-                save_user_scenario(current, overwrite=True)
-                st.session_state.saved_scenario_name = current.name
-                st.toast(f"Saved '{current.name}'", icon="💾")
-            except Exception as e:
-                st.error(f"Save failed: {e}")
-    with col_save_as:
-        if st.button("Save As…", use_container_width=True, key="sidebar_save_as"):
-            try:
-                path = save_user_scenario(current, overwrite=False)
-                st.session_state.saved_scenario_name = current.name
-                st.toast(f"Saved as {path.name}", icon="💾")
-            except Exception as e:
-                st.error(f"Save failed: {e}")
-
-    st.divider()
-    st.markdown("**Import / Export**")
-
-    render_scenario_import_panel(
-        key_prefix="sidebar_io",
-        on_loaded=_load_imported_scenario,
-        label="Import JSON file",
+    st.caption(
+        "**Save** updates your library copy (reload from **Scenarios**). "
+        "**Save As** writes a new library file under a name you choose. "
+        "**Export** on Setup / Results downloads JSON to your computer."
     )
-    render_scenario_export_button(current, key_prefix="sidebar_export")
+
+    if st.button("Save", use_container_width=True, key="sidebar_save"):
+        try:
+            path = save_user_scenario(current, overwrite=True)
+            st.session_state.saved_scenario_name = current.name
+            st.toast(f"Saved to library: {path.name}", icon="💾")
+        except Exception as e:
+            st.error(f"Save failed: {e}")
+
+    save_as_name = st.text_input(
+        "Save As — file name",
+        value=current.name,
+        key="sidebar_save_as_name",
+        help="Saved to ~/.financial-simulator/v1/scenarios/ (library folder on this machine).",
+    )
+    if st.button("Save As…", use_container_width=True, key="sidebar_save_as"):
+        chosen = (save_as_name or current.name).strip()
+        if not chosen:
+            st.warning("Enter a file name for Save As.")
+        else:
+            try:
+                to_save = current.clone()
+                to_save.name = chosen
+                path = save_user_scenario(to_save, overwrite=False, file_name=chosen)
+                st.session_state.current_scenario = to_save
+                st.session_state.saved_scenario_name = chosen
+                st.toast(f"Saved as {path.name}", icon="💾")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Save failed: {e}")
 
     st.divider()
-    st.caption("Load saved scenarios from the **Scenarios** section.")
+    st.caption(
+        "Import from **Setup** or **Scenarios**. Load saved library files from **Scenarios**."
+    )
 
 # =============================================================================
 # SECTION 1: SETUP
