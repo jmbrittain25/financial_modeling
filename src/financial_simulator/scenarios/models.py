@@ -234,6 +234,48 @@ AnyExternalDriver = Annotated[
 
 
 # =============================================================================
+# Macro Environment (required market variables)
+# =============================================================================
+
+MacroSlot = Literal["interest_rates", "housing", "stock_market"]
+MacroMode = Literal["constant", "growth", "stochastic"]
+StochasticType = Literal["gbm", "mean_reverting"]
+
+
+class MacroVariableConfig(BaseModel):
+    """How one macro state variable evolves over the simulation horizon."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    slot: MacroSlot
+    state_key: str
+    mode: MacroMode = "constant"
+    value: float = 0.05
+    annual_rate: float = 0.04
+    stochastic_type: StochasticType = "gbm"
+    drift: float = 0.08
+    volatility: float = 0.16
+    long_term_mean: float = 0.045
+    reversion_speed: float = 1.2
+
+
+class MacroEnvironment(BaseModel):
+    """The three required macro variables for every scenario."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    interest_rates: MacroVariableConfig
+    housing: MacroVariableConfig
+    stock_market: MacroVariableConfig
+
+    def slots(self) -> list[MacroVariableConfig]:
+        return [self.interest_rates, self.housing, self.stock_market]
+
+    def state_keys(self) -> list[str]:
+        return [v.state_key for v in self.slots()]
+
+
+# =============================================================================
 # Top-Level Scenario Configuration
 # =============================================================================
 
@@ -267,7 +309,10 @@ class ScenarioConfig(BaseModel):
     event_builders: list[ComposedEventBuilder] = Field(default_factory=list)
     continuous_processes: list[AnyContinuousProcess] = Field(default_factory=list)
 
-    # New scenario-builder power features
+    # Required macro environment (interest rates, housing, stock market)
+    macro_environment: MacroEnvironment | None = None
+
+    # Legacy driver list — migrated into macro_environment on load when absent
     external_drivers: list[AnyExternalDriver] = Field(default_factory=list)
     custom_metrics: list[CustomMetric] = Field(default_factory=list)
 
@@ -283,7 +328,17 @@ class ScenarioConfig(BaseModel):
 
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> ScenarioConfig:
-        return cls.model_validate(data)
+        cfg = cls.model_validate(data)
+        return cfg.with_resolved_macro()
+
+    def with_resolved_macro(self) -> ScenarioConfig:
+        """Ensure macro_environment is populated (migrate legacy drivers if needed)."""
+        from .macro_environment import default_macro_environment, ensure_macro_environment
+
+        if self.macro_environment is not None:
+            return self
+        resolved = ensure_macro_environment(self)
+        return self.model_copy(update={"macro_environment": resolved})
 
     def to_dict(self) -> dict[str, Any]:
         return self.model_dump(mode="json", exclude_none=True)
@@ -293,7 +348,8 @@ class ScenarioConfig(BaseModel):
 
     @classmethod
     def from_json(cls, text: str) -> ScenarioConfig:
-        return cls.model_validate_json(text)
+        cfg = cls.model_validate_json(text)
+        return cfg.with_resolved_macro()
 
     # ------------------------------------------------------------------
     # UI / builder helpers (pure, no side effects)
@@ -327,7 +383,11 @@ class ScenarioConfig(BaseModel):
             "horizon_years": round(horizon_days / 365.25, 1) if horizon_days > 0 else 0.0,
             "num_event_builders": len(self.event_builders),
             "num_continuous": len(self.continuous_processes),
-            "num_drivers": len(self.external_drivers),
+            "num_drivers": 3,
+            "macro_modes": {
+                v.slot: v.mode
+                for v in (self.macro_environment.slots() if self.macro_environment else [])
+            },
             "num_custom_metrics": len(self.custom_metrics),
             "has_stochastic": any(
                 "Distribution" in str(type(getattr(eb.value_gen, "dist", None)))
@@ -348,5 +408,10 @@ __all__ = [
     "ContinuousGBMDriver",
     "ContinuousMeanRevertDriver",
     "AnyExternalDriver",
+    "MacroEnvironment",
+    "MacroMode",
+    "MacroSlot",
+    "MacroVariableConfig",
+    "StochasticType",
     "ScenarioConfig",
 ]

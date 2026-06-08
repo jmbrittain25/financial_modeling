@@ -78,6 +78,20 @@ def format_driver_links(builder: ComposedEventBuilder, drivers: list[Any]) -> st
     return ", ".join(names)
 
 
+def format_macro_links(builder: ComposedEventBuilder, macro: Any) -> str:
+    """Comma-separated macro slot titles this generator reads from."""
+    from financial_simulator.scenarios.macro_environment import SLOT_DEFS
+
+    gen_keys = get_generator_state_keys(builder)
+    if not gen_keys or macro is None:
+        return ""
+    names: list[str] = []
+    for var in macro.slots():
+        if var.state_key in gen_keys:
+            names.append(SLOT_DEFS[var.slot]["title"])
+    return ", ".join(names)
+
+
 def build_process_from_config(
     config: dict[str, Any],
     gen_id: str,
@@ -174,6 +188,7 @@ __all__ = [
     "continuous_process_name",
     "find_linked_process",
     "format_driver_links",
+    "format_macro_links",
     "get_continuous_process_config",
     "get_driver_target_keys",
     "get_generator_state_keys",

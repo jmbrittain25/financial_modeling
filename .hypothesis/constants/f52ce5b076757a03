@@ -1,4 +1,0 @@
-# file: /Users/justinbrittain/.grok/worktrees/projects-financial-modeling/advanced-ui-2/app/components/external_drivers_editor.py
-# hypothesis_version: 6.155.1
-
-[0.012, 0.025, 0.05, 3650, 'Constant Value', 'Driver Name', 'Name', 'Target State Key', 'Update every N days', 'drivers', 'external_driver', 'inflation_rate', 'initial_inflation', 'interest_rate_driver', 'interval', 'market_rate', 'name', 'source', '🗑️']

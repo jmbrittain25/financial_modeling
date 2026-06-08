@@ -28,6 +28,8 @@ from app.components.results_dashboard import render_results_dashboard
 from app.components.scenario_io import render_scenario_export_button, render_scenario_import_panel
 from financial_simulator.scenarios import (
     ScenarioConfig,
+    default_macro_environment,
+    ensure_macro_environment,
     get_user_data_dir,
     run_monte_carlo,
     run_single,
@@ -50,6 +52,7 @@ def _blank_scenario() -> ScenarioConfig:
         start=datetime(2026, 1, 1),
         end=datetime(2036, 1, 1),
         initial_state={"cash": 0.0},
+        macro_environment=default_macro_environment(),
     )
 
 
@@ -106,6 +109,9 @@ if "init_var_form_reset" not in st.session_state:
     st.session_state.init_var_form_reset = 0
 
 current: ScenarioConfig = st.session_state.current_scenario
+if current.macro_environment is None:
+    current.macro_environment = ensure_macro_environment(current)
+    st.session_state.current_scenario = current
 
 # =============================================================================
 # SIDEBAR — scenario management
@@ -288,9 +294,10 @@ elif nav == "2 · Event Generators":
         "variables by state key, and optionally apply **background evolution** between events."
     )
 
-    current.external_drivers = render_environment_editor(
+    current.macro_environment = render_environment_editor(
         key_prefix="main_environment",
-        drivers=current.external_drivers,
+        macro=ensure_macro_environment(current),
+        scenario=current,
         scenario_start=current.start,
         scenario_end=current.end,
         generators=current.event_builders,
@@ -303,7 +310,7 @@ elif nav == "2 · Event Generators":
         key_prefix="main_generators",
         builders=current.event_builders,
         continuous_processes=current.continuous_processes,
-        external_drivers=current.external_drivers,
+        macro_environment=current.macro_environment,
     )
 
 # =============================================================================

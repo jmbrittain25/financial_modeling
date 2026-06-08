@@ -30,6 +30,15 @@ from .drivers import (
     make_stock_market_driver,
     sample_driver_path,
 )
+from .macro_environment import (
+    MacroEnvironment,
+    MacroVariableConfig,
+    apply_macro_environment,
+    default_macro_environment,
+    ensure_macro_environment,
+    migrate_macro_from_external_drivers,
+    sample_macro_paths,
+)
 from .materialization import build_engine, run_monte_carlo, run_single
 from .metrics import compute_all_metrics, compute_metric
 from .models import (
@@ -80,6 +89,13 @@ __all__ = [
     "make_stock_market_driver",
     "compute_metric",
     "compute_all_metrics",
+    "MacroEnvironment",
+    "MacroVariableConfig",
+    "default_macro_environment",
+    "ensure_macro_environment",
+    "apply_macro_environment",
+    "migrate_macro_from_external_drivers",
+    "sample_macro_paths",
     "build_engine",
     "run_single",
     "run_monte_carlo",

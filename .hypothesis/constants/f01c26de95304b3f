@@ -1,4 +1,0 @@
-# file: /Users/justinbrittain/.grok/worktrees/projects-financial-modeling/advanced-ui-2/src/financial_simulator/scenarios/persistence.py
-# hypothesis_version: 6.155.1
-
-['*.json', '-', '.financial-simulator', 'TEMPLATES_DIR', 'USER_DATA_ROOT', 'USER_SCENARIOS_DIR', '_', '__self__', 'app', 'data', 'ensure_user_dirs', 'get_user_data_dir', 'list_templates', 'list_user_scenarios', 'load_scenario', 'load_template', 'load_user_scenario', 'name', 'save_scenario', 'save_user_scenario', 'scenario_from_json', 'scenario_to_json', 'scenarios', 'templates', 'untitled', 'utf-8', 'v1']

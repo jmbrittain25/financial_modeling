@@ -1,4 +1,0 @@
-# file: /Users/justinbrittain/.grok/worktrees/projects-financial-modeling/advanced-ui-2/app/components/results_dashboard.py
-# hypothesis_version: 6.155.1
-
-[0.0, 0.05, 0.75, 0.95, 1.02, 2.5, 365.25, 320, 380, '#1e40af', '#3b82f6', '10th %ile', '5th %ile (Downside)', '90th %ile', '95th %ile (Upside)', 'Count', 'Final Value', 'Mean Final', 'Median', 'Scenario', 'Years from Start', '__custom_metrics__', 'band_key_selector', 'cash', 'cumulative_cash', 'final_value', 'h', 'home_value', 'lines', 'plot_state_bands', 'plotly_white', 'portfolio_value', 'rgba(59,130,246,0.2)', 'savings', 'text/csv', 'tonexty', 'x unified']

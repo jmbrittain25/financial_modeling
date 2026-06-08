@@ -15,9 +15,8 @@ from app.components.scenario_links import (
     CONTINUOUS_PROCESS_META_KEY,
     config_from_process,
     find_linked_process,
-    format_driver_links,
+    format_macro_links,
     get_continuous_process_config,
-    get_driver_target_keys,
     sync_continuous_processes,
 )
 from app.components.timing_editor import render_timing_editor
@@ -172,7 +171,7 @@ def render_event_builder_list_editor(
     key_prefix: str = "events",
     builders: list[ComposedEventBuilder] | None = None,
     continuous_processes: list[Any] | None = None,
-    external_drivers: list[Any] | None = None,
+    macro_environment: Any | None = None,
 ) -> tuple[list[ComposedEventBuilder], list[Any]]:
     """
     Interactive list manager for event generators.
@@ -186,10 +185,7 @@ def render_event_builder_list_editor(
         builders = []
     if continuous_processes is None:
         continuous_processes = []
-    if external_drivers is None:
-        external_drivers = []
-
-    environment_keys = get_driver_target_keys(external_drivers)
+    environment_keys = list(macro_environment.state_keys()) if macro_environment else []
 
     st.caption(
         "Enter positive amounts only. Use **Add to cash** / **Subtract from cash** on each "
@@ -226,7 +222,7 @@ def render_event_builder_list_editor(
                     CASH_FLOW_SUBTRACTIVE if subtract_on else CASH_FLOW_ADDITIVE
                 )
                 c1.caption(_flow_label(eb.metadata))
-                driver_link = format_driver_links(eb, external_drivers)
+                driver_link = format_macro_links(eb, macro_environment)
                 if driver_link:
                     c1.caption(f"Environment: {driver_link}")
                 bg_cfg = get_continuous_process_config(eb.metadata)

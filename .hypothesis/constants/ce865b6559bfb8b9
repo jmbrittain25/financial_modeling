@@ -1,4 +1,0 @@
-# file: /Users/justinbrittain/.grok/worktrees/projects-financial-modeling/advanced-ui-2/app/components/custom_metrics_editor.py
-# hypothesis_version: 6.155.1
-
-[0.0, 500000, '### 📊 Custom Metrics', '**Parameters**', 'Add Metric', 'Display Format', 'Event Count by Type', 'Final State Value', 'Higher is Better?', 'METRIC_TYPE_INFO', 'Max Drawdown', 'Maximum Drawdown', 'Metric Name', 'Metric Type', 'Set a goal value', 'Time to Goal', 'Time to Threshold', 'Total Inflows', 'above', 'contribution', 'count', 'cumulative_cash', 'currency', 'custom_metric', 'description', 'direction', 'event_count', 'event_count_by_type', 'example_params', 'final_state_value', 'final_value', 'get_default_metric', 'key', 'label', 'max_drawdown', 'max_drawdown_on_path', 'metadata_type', 'metrics', 'number', 'percent', 'portfolio_value', 'revenue', 'state_key', 'sum_positive_events', 'threshold', 'time_to_threshold', 'total_inflows', 'years', 'years_to_goal', '🗑️ Remove']
