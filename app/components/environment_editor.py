@@ -95,7 +95,9 @@ def _plot_macro_paths(
     return fig
 
 
-def _render_mode_selector(st, key_prefix: str, slot: MacroSlot, current: MacroVariableConfig) -> str:
+def _render_mode_selector(
+    st, key_prefix: str, slot: MacroSlot, current: MacroVariableConfig
+) -> str:
     modes = list(MODE_LABELS.keys())
     labels = [MODE_LABELS[m] for m in modes]
     try:
@@ -294,7 +296,9 @@ def _render_slot_expander(
                 m1, m2, m3 = st.columns(3)
                 m1.metric("End (mean)", f"{summary['mean_terminal']:.4f}")
                 m2.metric("End (std)", f"{summary['std_terminal']:.4f}")
-                m3.metric("End range", f"{summary['min_terminal']:.2f} – {summary['max_terminal']:.2f}")
+                m3.metric(
+                    "End range", f"{summary['min_terminal']:.2f} – {summary['max_terminal']:.2f}"
+                )
             except Exception as ex:
                 st.caption(f"Preview unavailable: {ex}")
         else:
