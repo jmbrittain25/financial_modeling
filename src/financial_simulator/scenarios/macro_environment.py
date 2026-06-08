@@ -30,7 +30,14 @@ from .models import (
     ScenarioConfig,
 )
 
-MACRO_STATE_KEYS = frozenset({"market_rate", "home_value", "portfolio_value"})
+# Canonical defaults; bind_macro_to_initial_state maps to Setup variable names when present.
+MACRO_STATE_KEYS = frozenset({"market_rate", "home_value", "portfolio_value", "stocks"})
+
+SLOT_KEY_CANDIDATES: dict[MacroSlot, list[str]] = {
+    "interest_rates": ["market_rate", "mortgage_rate", "interest_rate"],
+    "housing": ["home_value", "house_value", "house equity", "home_equity", "property_value"],
+    "stock_market": ["stocks", "portfolio_value", "investments", "equities"],
+}
 
 SLOT_DEFS: dict[MacroSlot, dict[str, Any]] = {
     "interest_rates": {
@@ -47,7 +54,7 @@ SLOT_DEFS: dict[MacroSlot, dict[str, Any]] = {
     },
     "stock_market": {
         "title": "Stock market",
-        "state_key": "portfolio_value",
+        "state_key": "stocks",
         "value_kind": "currency",
         "default_stochastic": "gbm",
     },
@@ -162,13 +169,55 @@ def migrate_macro_from_external_drivers(drivers: list[Any]) -> MacroEnvironment 
     return MacroEnvironment(**updates)
 
 
+def resolve_macro_state_key(
+    slot: MacroSlot,
+    initial_state: dict[str, Any],
+    current_key: str,
+) -> str:
+    """Map a macro slot onto a Setup variable name when possible."""
+    if current_key in initial_state:
+        return current_key
+    for candidate in SLOT_KEY_CANDIDATES.get(slot, []):
+        if candidate in initial_state:
+            return candidate
+    return SLOT_DEFS[slot]["state_key"]
+
+
+def starting_value_for_key(initial_state: dict[str, Any], key: str, fallback: float) -> float:
+    raw = initial_state.get(key)
+    if isinstance(raw, (int, float)):
+        return float(raw)
+    return fallback
+
+
+def bind_macro_to_initial_state(
+    macro: MacroEnvironment,
+    initial_state: dict[str, Any] | None,
+) -> MacroEnvironment:
+    """Align macro state keys and starting values with Setup variables."""
+    state = initial_state or {}
+    updates: dict[str, MacroVariableConfig] = {}
+    for slot_name in ("interest_rates", "housing", "stock_market"):
+        var: MacroVariableConfig = getattr(macro, slot_name)
+        resolved_key = resolve_macro_state_key(var.slot, state, var.state_key)
+        resolved_value = starting_value_for_key(state, resolved_key, var.value)
+        updates[slot_name] = var.model_copy(
+            update={"state_key": resolved_key, "value": resolved_value}
+        )
+    return macro.model_copy(update=updates)
+
+
+def macro_driven_keys(macro: MacroEnvironment) -> frozenset[str]:
+    return frozenset(var.state_key for var in macro.slots())
+
+
 def ensure_macro_environment(cfg: ScenarioConfig) -> MacroEnvironment:
     """Return macro environment, migrating legacy drivers when needed."""
     macro = getattr(cfg, "macro_environment", None)
     if macro is None:
         migrated = migrate_macro_from_external_drivers(cfg.external_drivers)
-        return migrated or default_macro_environment()
-    return macro
+        macro = migrated or default_macro_environment()
+    return bind_macro_to_initial_state(macro, cfg.initial_state)
 
 
 def macro_variable_to_preview_driver(var: MacroVariableConfig) -> Any:
@@ -260,11 +309,13 @@ def sample_macro_paths(
 def apply_macro_environment(eng: SimulationEngine, macro: MacroEnvironment) -> None:
     """Wire the three macro variables into engine state and continuous processes."""
     for var in macro.slots():
+        start_value = starting_value_for_key(eng.initial_state, var.state_key, var.value)
+
         if var.mode == "constant":
             eng.initial_state[var.state_key] = var.value
             continue
 
-        eng.initial_state.setdefault(var.state_key, var.value)
+        eng.initial_state[var.state_key] = start_value
 
         if var.mode == "growth":
             eng.add_continuous_process(
@@ -323,13 +374,18 @@ def macro_summary_label(var: MacroVariableConfig) -> str:
 __all__ = [
     "MACRO_STATE_KEYS",
     "SLOT_DEFS",
+    "SLOT_KEY_CANDIDATES",
     "MacroEnvironment",
     "MacroSlot",
     "MacroVariableConfig",
     "apply_macro_environment",
+    "bind_macro_to_initial_state",
     "default_macro_environment",
     "default_macro_variable",
     "ensure_macro_environment",
+    "macro_driven_keys",
+    "resolve_macro_state_key",
+    "starting_value_for_key",
     "macro_summary_label",
     "macro_variable_to_preview_driver",
     "migrate_macro_from_external_drivers",

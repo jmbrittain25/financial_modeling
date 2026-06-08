@@ -4,17 +4,21 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 
+import pytest
+
 from app.components.scenario_links import format_macro_links
-from financial_simulator.core import IntervalTiming
+from financial_simulator.core import FixedValue, IntervalTiming
 from financial_simulator.core.event import ComposedEventBuilder, VariableRateLoanValue
 from financial_simulator.scenarios import (
     ScenarioConfig,
     build_engine,
     default_macro_environment,
     ensure_macro_environment,
+    run_single,
 )
 from financial_simulator.scenarios.drivers import make_interest_rate_driver
 from financial_simulator.scenarios.macro_environment import (
+    bind_macro_to_initial_state,
     migrate_macro_from_external_drivers,
     sample_macro_paths,
 )
@@ -33,7 +37,7 @@ def _minimal_cfg(**kwargs) -> ScenarioConfig:
 def test_default_macro_has_three_slots():
     macro = default_macro_environment()
     assert len(macro.slots()) == 3
-    assert macro.state_keys() == ["market_rate", "home_value", "portfolio_value"]
+    assert macro.state_keys() == ["market_rate", "home_value", "stocks"]
 
 
 def test_migrate_legacy_interest_driver():
@@ -107,3 +111,54 @@ def test_ensure_macro_falls_back_to_defaults():
     cfg = _minimal_cfg()
     macro = ensure_macro_environment(cfg)
     assert macro.interest_rates.mode == "constant"
+
+
+def test_bind_macro_maps_stocks_not_portfolio_value():
+    macro = default_macro_environment()
+    bound = bind_macro_to_initial_state(
+        macro,
+        {"cash": 1.0, "stocks": 265_000.0, "house equity": 100_000.0},
+    )
+    assert bound.stock_market.state_key == "stocks"
+    assert bound.stock_market.value == 265_000.0
+    assert bound.housing.state_key == "house equity"
+    assert bound.housing.value == 100_000.0
+
+
+def test_budget_scenario_grows_stocks_with_stock_market_macro():
+    macro = default_macro_environment()
+    macro = macro.model_copy(
+        update={
+            "stock_market": macro.stock_market.model_copy(
+                update={
+                    "state_key": "portfolio_value",
+                    "mode": "growth",
+                    "value": 100_000.0,
+                    "annual_rate": 0.07,
+                }
+            )
+        }
+    )
+    cfg = ScenarioConfig(
+        name="budget-like",
+        start=datetime(2026, 1, 1),
+        end=datetime(2030, 12, 31),
+        initial_state={"cash": 27_000.0, "stocks": 265_000.0},
+        event_builders=[
+            ComposedEventBuilder(
+                name="heartbeat",
+                timing=IntervalTiming(interval=timedelta(days=30)),
+                value_gen=FixedValue(value=0.0),
+            )
+        ],
+        macro_environment=macro,
+    )
+
+    macro = ensure_macro_environment(cfg)
+    assert macro.stock_market.state_key == "stocks"
+    assert macro.stock_market.value == 265_000.0
+
+    result = run_single(cfg, seed=42)
+    assert result.final_state["stocks"] > 265_000.0
+    # ~5 years of 7% growth between monthly ticks (close to annual compounding)
+    assert result.final_state["stocks"] == pytest.approx(265_000.0 * (1.07**5), rel=0.02)

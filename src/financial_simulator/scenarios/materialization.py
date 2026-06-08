@@ -20,9 +20,9 @@ from ..core import (
 )
 from ..monte_carlo.runner import MonteCarloRunner
 from .macro_environment import (
-    MACRO_STATE_KEYS,
     apply_macro_environment,
     ensure_macro_environment,
+    macro_driven_keys,
 )
 from .metrics import compute_all_metrics
 from .models import (
@@ -57,11 +57,12 @@ def build_engine(
     )
 
     macro = ensure_macro_environment(cfg)
+    driven_keys = macro_driven_keys(macro)
     apply_macro_environment(eng, macro)
 
     # Expand legacy / extra external drivers (skip macro keys — handled above)
     for driver in cfg.external_drivers:
-        if getattr(driver, "target_state_key", None) in MACRO_STATE_KEYS:
+        if getattr(driver, "target_state_key", None) in driven_keys:
             continue
         if isinstance(driver, DiscreteRateDriver):
             # Turn into a RateChangeValue event builder (the classic variable-rate pattern)

@@ -12,13 +12,16 @@ from typing import Any
 
 from financial_simulator.scenarios.macro_environment import (
     SLOT_DEFS,
+    SLOT_KEY_CANDIDATES,
     MacroEnvironment,
     MacroSlot,
     MacroVariableConfig,
+    bind_macro_to_initial_state,
     default_macro_environment,
     ensure_macro_environment,
     macro_summary_label,
     sample_macro_paths,
+    starting_value_for_key,
 )
 from financial_simulator.scenarios.models import ScenarioConfig
 
@@ -114,17 +117,55 @@ def _render_mode_selector(
     return modes[labels.index(choice)]
 
 
+def _state_key_options(slot: MacroSlot, initial_state: dict[str, Any]) -> list[str]:
+    options: list[str] = []
+    for key, val in initial_state.items():
+        if isinstance(val, (int, float)) and key not in options:
+            options.append(key)
+    for candidate in SLOT_KEY_CANDIDATES.get(slot, []):
+        if candidate not in options:
+            options.append(candidate)
+    canonical = SLOT_DEFS[slot]["state_key"]
+    if canonical not in options:
+        options.append(canonical)
+    return options or [canonical]
+
+
+def _render_state_key_selector(
+    st,
+    key_prefix: str,
+    slot: MacroSlot,
+    current: MacroVariableConfig,
+    initial_state: dict[str, Any],
+) -> str:
+    options = _state_key_options(slot, initial_state)
+    try:
+        idx = options.index(current.state_key)
+    except ValueError:
+        idx = 0
+    return st.selectbox(
+        "Drives which Setup variable?",
+        options=options,
+        index=idx,
+        key=f"{key_prefix}_{slot}_state_key",
+        help="Macro evolution updates this state key during the simulation.",
+    )
+
+
 def _render_variable_form(
     st,
     key_prefix: str,
     slot: MacroSlot,
     current: MacroVariableConfig,
+    initial_state: dict[str, Any],
 ) -> MacroVariableConfig:
     meta = SLOT_DEFS[slot]
     is_rate = meta["value_kind"] == "rate"
-    mode = _render_mode_selector(st, key_prefix, slot, current)
+    state_key = _render_state_key_selector(st, key_prefix, slot, current, initial_state)
+    seeded_value = starting_value_for_key(initial_state, state_key, current.value)
+    current = current.model_copy(update={"state_key": state_key, "value": seeded_value})
 
-    st.caption(f"Simulation state key: `{current.state_key}`")
+    mode = _render_mode_selector(st, key_prefix, slot, current)
 
     if mode == "constant":
         if is_rate:
@@ -275,6 +316,7 @@ def _render_slot_expander(
     key_prefix: str,
     slot: MacroSlot,
     current: MacroVariableConfig,
+    initial_state: dict[str, Any],
     scenario_start: datetime | None,
     scenario_end: datetime | None,
     *,
@@ -282,7 +324,7 @@ def _render_slot_expander(
 ) -> MacroVariableConfig:
     label = macro_summary_label(current)
     with st.expander(label, expanded=expanded):
-        updated = _render_variable_form(st, key_prefix, slot, current)
+        updated = _render_variable_form(st, key_prefix, slot, current, initial_state)
 
         eff_start = scenario_start or datetime(2026, 1, 1)
         eff_end = scenario_end or datetime(2036, 1, 1)
@@ -327,6 +369,9 @@ def render_environment_editor(
     if macro is None:
         macro = default_macro_environment()
 
+    initial_state = dict((scenario.initial_state if scenario else {}) or {})
+    macro = bind_macro_to_initial_state(macro, initial_state)
+
     st.subheader("Market & macro environment")
     st.caption(
         "Every simulation includes **interest rates**, **housing**, and **stock market** "
@@ -346,6 +391,7 @@ def render_environment_editor(
             key_prefix,
             slot,
             slot_vars[slot],
+            initial_state,
             scenario_start,
             scenario_end,
             expanded=(i == 0),
