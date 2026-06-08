@@ -31,7 +31,6 @@ from financial_simulator.core.event import (
     IntervalTiming,
 )
 
-
 GENERATOR_ID_KEY = "_generator_id"
 
 
@@ -57,9 +56,7 @@ def _flow_widget_key(key_prefix: str, metadata: dict) -> str:
 def _sync_flow_widget_state(st, flow_key: str, metadata: dict) -> None:
     """Seed toggle session state from persisted metadata when the widget is new."""
     if flow_key not in st.session_state:
-        st.session_state[flow_key] = (
-            metadata.get(CASH_FLOW_DIRECTION_KEY) == CASH_FLOW_SUBTRACTIVE
-        )
+        st.session_state[flow_key] = metadata.get(CASH_FLOW_DIRECTION_KEY) == CASH_FLOW_SUBTRACTIVE
 
 
 def _render_continuous_process_editor(

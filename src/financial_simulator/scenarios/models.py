@@ -333,7 +333,7 @@ class ScenarioConfig(BaseModel):
 
     def with_resolved_macro(self) -> ScenarioConfig:
         """Ensure macro_environment is populated (migrate legacy drivers if needed)."""
-        from .macro_environment import default_macro_environment, ensure_macro_environment
+        from .macro_environment import ensure_macro_environment
 
         if self.macro_environment is not None:
             return self

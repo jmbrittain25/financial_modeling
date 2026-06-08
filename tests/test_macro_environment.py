@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 
 from app.components.scenario_links import format_macro_links
-from financial_simulator.core import FixedValue, IntervalTiming
+from financial_simulator.core import IntervalTiming
 from financial_simulator.core.event import ComposedEventBuilder, VariableRateLoanValue
 from financial_simulator.scenarios import (
     ScenarioConfig,
@@ -48,9 +48,7 @@ def test_build_engine_applies_constant_macro_keys():
     macro = default_macro_environment()
     macro = macro.model_copy(
         update={
-            "housing": macro.housing.model_copy(
-                update={"mode": "constant", "value": 750_000.0}
-            )
+            "housing": macro.housing.model_copy(update={"mode": "constant", "value": 750_000.0})
         }
     )
     cfg = _minimal_cfg(macro_environment=macro)

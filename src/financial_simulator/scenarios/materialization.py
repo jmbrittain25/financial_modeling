@@ -19,12 +19,12 @@ from ..core import (
     SimulationResult,
 )
 from ..monte_carlo.runner import MonteCarloRunner
-from .metrics import compute_all_metrics
 from .macro_environment import (
     MACRO_STATE_KEYS,
     apply_macro_environment,
     ensure_macro_environment,
 )
+from .metrics import compute_all_metrics
 from .models import (
     ConstantDriver,
     ContinuousGBMDriver,
