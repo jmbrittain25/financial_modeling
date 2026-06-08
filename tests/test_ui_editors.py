@@ -129,9 +129,11 @@ def test_event_builder_add_generator_mutates_list_in_place():
     builders: list = []
     mock_st = _mock_st(active_keys={"test_add_add_new"})
 
-    result = _run_with_mocks(mock_st, render_event_builder_list_editor, "test_add", builders)
+    builders_out, _ = _run_with_mocks(
+        mock_st, render_event_builder_list_editor, "test_add", builders
+    )
 
-    assert result is builders
+    assert builders_out is builders
     assert len(builders) == 1
     assert isinstance(builders[0], ComposedEventBuilder)
 

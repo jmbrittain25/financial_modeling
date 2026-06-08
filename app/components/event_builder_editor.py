@@ -9,7 +9,17 @@ from __future__ import annotations
 
 import uuid
 from datetime import timedelta
+from typing import Any
 
+from app.components.scenario_links import (
+    CONTINUOUS_PROCESS_META_KEY,
+    config_from_process,
+    find_linked_process,
+    format_driver_links,
+    get_continuous_process_config,
+    get_driver_target_keys,
+    sync_continuous_processes,
+)
 from app.components.timing_editor import render_timing_editor
 from app.components.value_generator_editor import render_value_generator_editor
 from financial_simulator.core.distributions import TriangularDistribution
@@ -53,6 +63,101 @@ def _sync_flow_widget_state(st, flow_key: str, metadata: dict) -> None:
         )
 
 
+def _render_continuous_process_editor(
+    st,
+    key_prefix: str,
+    gen_id: str,
+    metadata: dict,
+    linked_process: Any | None,
+) -> dict | None:
+    """Optional background evolution stored on generator metadata."""
+    from app.components.continuous_processes_editor import PROCESS_TYPE_INFO
+
+    existing = get_continuous_process_config(metadata)
+    if existing is None and linked_process is not None:
+        existing = config_from_process(linked_process)
+
+    enabled = existing is not None and existing.get("enabled", False)
+    enable = st.checkbox(
+        "Evolve a state variable between events",
+        value=enabled,
+        key=f"{key_prefix}_bg_enable_{gen_id}",
+        help="Background growth or volatility applied continuously (e.g. portfolio drift).",
+    )
+    if not enable:
+        return None
+
+    type_labels = {k: v["label"] for k, v in PROCESS_TYPE_INFO.items()}
+    current_type = (existing or {}).get("type", "appreciation")
+    type_keys = list(PROCESS_TYPE_INFO.keys())
+    chosen_label = st.selectbox(
+        "Background process type",
+        options=[type_labels[k] for k in type_keys],
+        index=type_keys.index(current_type) if current_type in type_keys else 0,
+        key=f"{key_prefix}_bg_type_{gen_id}",
+    )
+    label_to_key = {type_labels[k]: k for k in type_keys}
+    ptype = label_to_key[chosen_label]
+
+    var = st.text_input(
+        "State variable to evolve",
+        value=(existing or {}).get("var", "cash"),
+        key=f"{key_prefix}_bg_var_{gen_id}",
+    )
+
+    config: dict = {"enabled": True, "type": ptype, "var": var}
+    if ptype == "appreciation":
+        config["rate"] = st.number_input(
+            "Annual growth rate",
+            value=float((existing or {}).get("rate", 0.04)),
+            step=0.005,
+            format="%.3f",
+            key=f"{key_prefix}_bg_rate_{gen_id}",
+        )
+    elif ptype == "gbm":
+        c1, c2 = st.columns(2)
+        config["drift"] = c1.number_input(
+            "Drift",
+            value=float((existing or {}).get("drift", 0.08)),
+            step=0.005,
+            format="%.3f",
+            key=f"{key_prefix}_bg_drift_{gen_id}",
+        )
+        config["volatility"] = c2.number_input(
+            "Volatility",
+            value=float((existing or {}).get("volatility", 0.16)),
+            min_value=0.001,
+            step=0.01,
+            format="%.3f",
+            key=f"{key_prefix}_bg_vol_{gen_id}",
+        )
+    elif ptype == "mean_reverting":
+        c1, c2, c3 = st.columns(3)
+        config["long_term_mean"] = c1.number_input(
+            "Long-term mean",
+            value=float((existing or {}).get("long_term_mean", 0.045)),
+            step=0.005,
+            format="%.3f",
+            key=f"{key_prefix}_bg_ltm_{gen_id}",
+        )
+        config["speed"] = c2.number_input(
+            "Reversion speed",
+            value=float((existing or {}).get("speed", 1.2)),
+            min_value=0.01,
+            step=0.1,
+            key=f"{key_prefix}_bg_speed_{gen_id}",
+        )
+        config["volatility"] = c3.number_input(
+            "Volatility",
+            value=float((existing or {}).get("volatility", 0.008)),
+            min_value=0.001,
+            step=0.005,
+            format="%.3f",
+            key=f"{key_prefix}_bg_mrvol_{gen_id}",
+        )
+    return config
+
+
 def _default_generator() -> ComposedEventBuilder:
     """Blank-slate generator — user configures timing and distribution."""
     return ComposedEventBuilder(
@@ -66,7 +171,9 @@ def _default_generator() -> ComposedEventBuilder:
 def render_event_builder_list_editor(
     key_prefix: str = "events",
     builders: list[ComposedEventBuilder] | None = None,
-) -> list[ComposedEventBuilder]:
+    continuous_processes: list[Any] | None = None,
+    external_drivers: list[Any] | None = None,
+) -> tuple[list[ComposedEventBuilder], list[Any]]:
     """
     Interactive list manager for event generators.
 
@@ -77,6 +184,12 @@ def render_event_builder_list_editor(
 
     if builders is None:
         builders = []
+    if continuous_processes is None:
+        continuous_processes = []
+    if external_drivers is None:
+        external_drivers = []
+
+    environment_keys = get_driver_target_keys(external_drivers)
 
     st.caption(
         "Enter positive amounts only. Use **Add to cash** / **Subtract from cash** on each "
@@ -113,6 +226,14 @@ def render_event_builder_list_editor(
                     CASH_FLOW_SUBTRACTIVE if subtract_on else CASH_FLOW_ADDITIVE
                 )
                 c1.caption(_flow_label(eb.metadata))
+                driver_link = format_driver_links(eb, external_drivers)
+                if driver_link:
+                    c1.caption(f"Environment: {driver_link}")
+                bg_cfg = get_continuous_process_config(eb.metadata)
+                if bg_cfg and bg_cfg.get("enabled"):
+                    c1.caption(
+                        f"Background: `{bg_cfg.get('type', 'process')}` on `{bg_cfg.get('var', '?')}`"
+                    )
 
                 if c3.button("✏️ Edit", key=f"{key_prefix}_edit_{idx}", use_container_width=True):
                     st.session_state[f"{key_prefix}_editing_idx"] = idx
@@ -140,6 +261,8 @@ def render_event_builder_list_editor(
         st.markdown("---")
         st.markdown(f"### Editing Generator #{editing_idx + 1}")
         current = builders[editing_idx]
+        gen_id = _ensure_generator_id(current.metadata)
+        linked_proc = find_linked_process(gen_id, continuous_processes)
 
         name = st.text_input(
             "Name",
@@ -169,9 +292,25 @@ def render_event_builder_list_editor(
             initial=current.timing,
             help_text="When does this generator fire?",
         )
+        if environment_keys:
+            st.caption(
+                f"Environment state keys available: `{', '.join(environment_keys)}` — "
+                "use these in loan rate / dividend keys to link generators to the macro environment."
+            )
+
         new_vg = render_value_generator_editor(
             key_prefix=f"{key_prefix}_edit_vg_{editing_idx}",
             initial=current.value_gen,
+            environment_keys=environment_keys,
+        )
+
+        st.markdown("#### Background evolution")
+        bg_config = _render_continuous_process_editor(
+            st,
+            key_prefix,
+            gen_id,
+            current.metadata,
+            linked_proc,
         )
 
         c1, c2 = st.columns(2)
@@ -183,6 +322,10 @@ def render_event_builder_list_editor(
                 "type": meta_type,
                 CASH_FLOW_DIRECTION_KEY: flow_choice,
             }
+            if bg_config:
+                saved_metadata[CONTINUOUS_PROCESS_META_KEY] = bg_config
+            else:
+                saved_metadata.pop(CONTINUOUS_PROCESS_META_KEY, None)
             builders[editing_idx] = ComposedEventBuilder(
                 name=name or None,
                 timing=new_timing,
@@ -190,8 +333,9 @@ def render_event_builder_list_editor(
                 metadata=saved_metadata,
             )
             flow_key = _flow_widget_key(key_prefix, saved_metadata)
-            st.session_state[flow_key] = flow_choice == CASH_FLOW_SUBTRACTIVE
+            st.session_state.pop(flow_key, None)
             st.session_state.pop(f"{key_prefix}_editing_idx", None)
+            continuous_processes = sync_continuous_processes(builders, continuous_processes)
             st.success("Generator updated.")
             st.rerun()
 
@@ -199,7 +343,8 @@ def render_event_builder_list_editor(
             st.session_state.pop(f"{key_prefix}_editing_idx", None)
             st.rerun()
 
-    return builders
+    continuous_processes = sync_continuous_processes(builders, continuous_processes)
+    return builders, continuous_processes
 
 
 # Kept for backward compatibility with tests that referenced presets

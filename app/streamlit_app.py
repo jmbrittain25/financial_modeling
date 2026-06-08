@@ -21,10 +21,8 @@ from datetime import datetime
 
 import streamlit as st
 
-from app.components.continuous_processes_editor import render_continuous_processes_editor
-from app.components.custom_metrics_editor import render_custom_metrics_editor
+from app.components.environment_editor import render_environment_editor
 from app.components.event_builder_editor import render_event_builder_list_editor
-from app.components.external_drivers_editor import render_external_drivers_editor
 from app.components.library_manager import render_library_manager
 from app.components.results_dashboard import render_results_dashboard
 from app.components.scenario_io import render_scenario_export_button, render_scenario_import_panel
@@ -283,45 +281,30 @@ if nav == "1 · Setup":
 # SECTION 2: EVENT GENERATORS
 # =============================================================================
 elif nav == "2 · Event Generators":
-    st.header("Event Generators")
+    st.header("Generators & Environment")
     st.markdown(
-        "Build as many generators as you need. Each one defines **when** something "
-        "happens and **how much** it changes — including custom distributions for "
-        "stochastic amounts."
+        "First define how **markets and macro factors** evolve, then build **cash-flow "
+        "generators** that fire on a schedule. Generators can link to environment "
+        "variables by state key, and optionally apply **background evolution** between events."
     )
 
-    current.event_builders = render_event_builder_list_editor(
+    current.external_drivers = render_environment_editor(
+        key_prefix="main_environment",
+        drivers=current.external_drivers,
+        scenario_start=current.start,
+        scenario_end=current.end,
+        generators=current.event_builders,
+    )
+
+    st.divider()
+    st.subheader("Cash-flow generators")
+
+    current.event_builders, current.continuous_processes = render_event_builder_list_editor(
         key_prefix="main_generators",
         builders=current.event_builders,
+        continuous_processes=current.continuous_processes,
+        external_drivers=current.external_drivers,
     )
-
-    with st.expander("Advanced — continuous processes (background growth / volatility)"):
-        st.caption(
-            "Optional. Models slow-moving changes between discrete events — e.g. "
-            "portfolio drift, home appreciation, mean-reverting interest rates."
-        )
-        current.continuous_processes = render_continuous_processes_editor(
-            key_prefix="main_processes",
-            processes=current.continuous_processes,
-        )
-
-    with st.expander("Advanced — external drivers (macro / market variables)"):
-        st.caption(
-            "Optional. Inject stochastic values into state keys on a schedule — "
-            "useful for variable mortgage rates or inflation indices."
-        )
-        current.external_drivers = render_external_drivers_editor(
-            key_prefix="main_drivers",
-            drivers=current.external_drivers,
-            scenario_start=current.start,
-            scenario_end=current.end,
-        )
-
-    with st.expander("Advanced — custom metrics (tracked after each run)"):
-        current.custom_metrics = render_custom_metrics_editor(
-            key_prefix="main_metrics",
-            metrics=current.custom_metrics,
-        )
 
 # =============================================================================
 # SECTION 3: RUN

@@ -60,9 +60,35 @@ def get_default_vg(vg_type: str) -> AnyValueGenerator:
     return FixedValue(value=0.0)
 
 
+def _state_key_input(
+    st,
+    label: str,
+    value: str,
+    key: str,
+    environment_keys: list[str] | None,
+) -> str:
+    """Text input with optional pick from environmental driver state keys."""
+    if environment_keys:
+        options = ["(custom)"] + environment_keys
+        default_idx = 0
+        if value in environment_keys:
+            default_idx = environment_keys.index(value) + 1
+        pick = st.selectbox(
+            f"{label} (environment or custom)",
+            options=options,
+            index=default_idx,
+            key=f"{key}_pick",
+        )
+        if pick == "(custom)":
+            return st.text_input(label, value=value, key=key)
+        return pick
+    return st.text_input(label, value=value, key=key)
+
+
 def render_value_generator_editor(
     key_prefix: str = "vg",
     initial: AnyValueGenerator | None = None,
+    environment_keys: list[str] | None = None,
 ) -> AnyValueGenerator:
     """
     Live editor for value generators. Returns a ready-to-use instance.
@@ -197,8 +223,12 @@ def render_value_generator_editor(
             step=12,
             key=f"{key_prefix}_loan_term",
         )
-        rate_key = st.text_input(
-            "State key that will hold the current rate", value=rk, key=f"{key_prefix}_loan_rate_key"
+        rate_key = _state_key_input(
+            st,
+            "State key that will hold the current rate",
+            rk,
+            f"{key_prefix}_loan_rate_key",
+            environment_keys,
         )
         return VariableRateLoanValue(
             principal=float(prin),
@@ -226,7 +256,13 @@ def render_value_generator_editor(
             format="%.3f",
             key=f"{key_prefix}_div_yld",
         )
-        key = c2.text_input("Investment value state key", value=k, key=f"{key_prefix}_div_key")
+        key = _state_key_input(
+            st,
+            "Investment value state key",
+            k,
+            f"{key_prefix}_div_key",
+            environment_keys,
+        )
         return DividendValue(annual_yield=float(yld), investment_value_key=key)
 
     if vg_type == "InvestmentContribution":

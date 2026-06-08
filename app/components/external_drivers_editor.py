@@ -76,6 +76,8 @@ def render_external_drivers_editor(
     drivers: list[Any] | None = None,
     scenario_start: datetime | None = None,
     scenario_end: datetime | None = None,
+    *,
+    embedded: bool = False,
 ) -> list[Any]:
     """
     Editor for external drivers list.
@@ -87,11 +89,12 @@ def render_external_drivers_editor(
     if drivers is None:
         drivers = []
 
-    st.markdown("### 🔗 External Drivers")
-    st.caption(
-        "External drivers inject stochastic or constant values into the simulation state on their own schedule. "
-        "The most powerful use case is variable interest rates that feed into loans (VariableRateLoanValue)."
-    )
+    if not embedded:
+        st.markdown("### 🔗 External Drivers")
+        st.caption(
+            "External drivers inject stochastic or constant values into the simulation state on their own schedule. "
+            "The most powerful use case is variable interest rates that feed into loans (VariableRateLoanValue)."
+        )
 
     # Quick add - support for all 4 driver types
     cols = st.columns(4)
