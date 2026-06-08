@@ -22,18 +22,30 @@ from app.components.custom_metrics_editor import render_custom_metrics_editor
 from app.components.event_builder_editor import render_event_builder_list_editor
 from app.components.external_drivers_editor import render_external_drivers_editor
 from financial_simulator.core import FixedValue, IntervalTiming
-from financial_simulator.core.event import ComposedEventBuilder
+from financial_simulator.core.event import (
+    CASH_FLOW_ADDITIVE,
+    CASH_FLOW_DIRECTION_KEY,
+    CASH_FLOW_SUBTRACTIVE,
+    ComposedEventBuilder,
+)
 from financial_simulator.scenarios import ScenarioConfig, build_engine, run_single
 
 
-def _mock_st(*, active_keys: set[str]) -> MagicMock:
+def _mock_st(*, active_keys: set[str], toggle_values: dict[str, bool] | None = None) -> MagicMock:
     """Minimal streamlit mock: only buttons whose key is in active_keys return True."""
     mock_st = MagicMock(name="mock_streamlit")
     mock_st.session_state = {}
+    toggle_values = toggle_values or {}
 
     def button_side_effect(*_args, **kwargs):
         key = kwargs.get("key", "")
         return key in active_keys
+
+    def toggle_side_effect(*_args, **kwargs):
+        key = kwargs.get("key", "")
+        if key in toggle_values:
+            mock_st.session_state[key] = toggle_values[key]
+        return mock_st.session_state.get(key, kwargs.get("value", False))
 
     def selectbox_side_effect(_label, options, *args, **kwargs):
         if isinstance(options, list) and options:
@@ -54,11 +66,13 @@ def _mock_st(*, active_keys: set[str]) -> MagicMock:
         for i in range(n):
             col = MagicMock(name=f"col_{i}")
             col.button.side_effect = button_side_effect
+            col.toggle.side_effect = toggle_side_effect
             col.selectbox.side_effect = selectbox_side_effect
             cols.append(col)
         return cols
 
     mock_st.button.side_effect = button_side_effect
+    mock_st.toggle.side_effect = toggle_side_effect
     mock_st.columns.side_effect = columns_side_effect
 
     mock_st.text_input.return_value = "test_item"
@@ -146,6 +160,31 @@ def test_event_builder_duplicate_mutates_in_place():
     assert len(builders) == 2
     assert builders[0].name == "seed"
     assert builders[1].name == "seed"
+
+
+def test_event_builder_cash_flow_toggle_uses_stable_keys():
+    from app.components.event_builder_editor import GENERATOR_ID_KEY, _flow_widget_key
+
+    b1 = ComposedEventBuilder(
+        name="income",
+        timing=IntervalTiming(interval=timedelta(days=30)),
+        value_gen=FixedValue(100),
+        metadata={GENERATOR_ID_KEY: "gen-a", CASH_FLOW_DIRECTION_KEY: CASH_FLOW_ADDITIVE},
+    )
+    b2 = ComposedEventBuilder(
+        name="expense",
+        timing=IntervalTiming(interval=timedelta(days=30)),
+        value_gen=FixedValue(50),
+        metadata={GENERATOR_ID_KEY: "gen-b", CASH_FLOW_DIRECTION_KEY: CASH_FLOW_ADDITIVE},
+    )
+    builders = [b1, b2]
+    flow_key = _flow_widget_key("test_flow", b1.metadata)
+    mock_st = _mock_st(active_keys=set(), toggle_values={flow_key: True})
+
+    _run_with_mocks(mock_st, render_event_builder_list_editor, "test_flow", builders)
+
+    assert builders[0].metadata[CASH_FLOW_DIRECTION_KEY] == CASH_FLOW_SUBTRACTIVE
+    assert builders[1].metadata[CASH_FLOW_DIRECTION_KEY] == CASH_FLOW_ADDITIVE
 
 
 def test_event_builder_delete_uses_post_loop_mutation():

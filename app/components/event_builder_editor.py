@@ -7,6 +7,7 @@ Each generator combines timing (when it fires) with a value generator
 
 from __future__ import annotations
 
+import uuid
 from datetime import timedelta
 
 from app.components.timing_editor import render_timing_editor
@@ -22,10 +23,34 @@ from financial_simulator.core.event import (
 )
 
 
+GENERATOR_ID_KEY = "_generator_id"
+
+
 def _flow_label(metadata: dict) -> str:
     if metadata.get(CASH_FLOW_DIRECTION_KEY) == CASH_FLOW_SUBTRACTIVE:
         return "Subtracts from cash"
     return "Adds to cash"
+
+
+def _ensure_generator_id(metadata: dict) -> str:
+    """Stable per-generator id for Streamlit widget keys (survives reorder/delete)."""
+    gen_id = metadata.get(GENERATOR_ID_KEY)
+    if not gen_id:
+        gen_id = str(uuid.uuid4())
+        metadata[GENERATOR_ID_KEY] = gen_id
+    return gen_id
+
+
+def _flow_widget_key(key_prefix: str, metadata: dict) -> str:
+    return f"{key_prefix}_flow_{_ensure_generator_id(metadata)}"
+
+
+def _sync_flow_widget_state(st, flow_key: str, metadata: dict) -> None:
+    """Seed toggle session state from persisted metadata when the widget is new."""
+    if flow_key not in st.session_state:
+        st.session_state[flow_key] = (
+            metadata.get(CASH_FLOW_DIRECTION_KEY) == CASH_FLOW_SUBTRACTIVE
+        )
 
 
 def _default_generator() -> ComposedEventBuilder:
@@ -72,27 +97,31 @@ def render_event_builder_list_editor(
         for idx, eb in enumerate(builders):
             with st.container(border=True):
                 c1, c2, c3, c4, c5 = st.columns([2, 2, 1, 1, 1])
+                flow_key = _flow_widget_key(key_prefix, eb.metadata)
+                _sync_flow_widget_state(st, flow_key, eb.metadata)
+
                 c1.markdown(
                     f"**{eb.name or f'Generator {idx + 1}'}** — `{eb.metadata.get('type', 'custom')}`"
                 )
-                c1.caption(_flow_label(eb.metadata))
 
-                is_subtractive = eb.metadata.get(CASH_FLOW_DIRECTION_KEY) == CASH_FLOW_SUBTRACTIVE
-                if c2.toggle(
+                subtract_on = c2.toggle(
                     "Subtract from cash",
-                    value=is_subtractive,
-                    key=f"{key_prefix}_flow_{idx}",
+                    key=flow_key,
                     help="Off = add to cash. On = subtract from cash.",
-                ):
-                    eb.metadata[CASH_FLOW_DIRECTION_KEY] = CASH_FLOW_SUBTRACTIVE
-                else:
-                    eb.metadata[CASH_FLOW_DIRECTION_KEY] = CASH_FLOW_ADDITIVE
+                )
+                eb.metadata[CASH_FLOW_DIRECTION_KEY] = (
+                    CASH_FLOW_SUBTRACTIVE if subtract_on else CASH_FLOW_ADDITIVE
+                )
+                c1.caption(_flow_label(eb.metadata))
 
                 if c3.button("✏️ Edit", key=f"{key_prefix}_edit_{idx}", use_container_width=True):
                     st.session_state[f"{key_prefix}_editing_idx"] = idx
                     st.rerun()
                 if c4.button("📋 Dup", key=f"{key_prefix}_dup_{idx}", use_container_width=True):
-                    builders.append(eb.model_copy(deep=True))
+                    dup = eb.model_copy(deep=True)
+                    dup.metadata.pop(GENERATOR_ID_KEY, None)
+                    _ensure_generator_id(dup.metadata)
+                    builders.append(dup)
                     st.toast("Duplicated", icon="📋")
                     st.rerun()
                 if c5.button("🗑️", key=f"{key_prefix}_del_{idx}", use_container_width=True):
@@ -149,16 +178,19 @@ def render_event_builder_list_editor(
         if c1.button(
             "✅ Save Changes", type="primary", key=f"{key_prefix}_save_edit_{editing_idx}"
         ):
+            saved_metadata = {
+                **current.metadata,
+                "type": meta_type,
+                CASH_FLOW_DIRECTION_KEY: flow_choice,
+            }
             builders[editing_idx] = ComposedEventBuilder(
                 name=name or None,
                 timing=new_timing,
                 value_gen=new_vg,
-                metadata={
-                    **current.metadata,
-                    "type": meta_type,
-                    CASH_FLOW_DIRECTION_KEY: flow_choice,
-                },
+                metadata=saved_metadata,
             )
+            flow_key = _flow_widget_key(key_prefix, saved_metadata)
+            st.session_state[flow_key] = flow_choice == CASH_FLOW_SUBTRACTIVE
             st.session_state.pop(f"{key_prefix}_editing_idx", None)
             st.success("Generator updated.")
             st.rerun()
